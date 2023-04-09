@@ -10,6 +10,7 @@
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "MotionControllerComponent.h"
+#include "BlastableActor.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
@@ -146,25 +147,31 @@ void AArmorBlastingCharacter::OnFire()
 		UWorld* const World = GetWorld();
 		if (World != NULL)
 		{
-			if (bUsingMotionControllers)
-			{
-				const FRotator SpawnRotation = VR_MuzzleLocation->GetComponentRotation();
-				const FVector SpawnLocation = VR_MuzzleLocation->GetComponentLocation();
-				World->SpawnActor<AArmorBlastingProjectile>(ProjectileClass, SpawnLocation, SpawnRotation);
-			}
-			else
-			{
-				const FRotator SpawnRotation = GetControlRotation();
-				// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-				const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
+			const FRotator SpawnRotation = GetControlRotation();
+			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+			const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
 
-				//Set Spawn Collision Handling Override
-				FActorSpawnParameters ActorSpawnParams;
-				ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+			// TODO finish Shoot code
+			auto CameraComponent = GetFirstPersonCameraComponent();
+			auto CameraForward = CameraComponent->GetComponentRotation().Vector();
+			CameraForward.Normalize();
+			FCollisionQueryParams QueryParams = FCollisionQueryParams::DefaultQueryParam;
+			QueryParams.AddIgnoredActor(this);
 
-				// spawn the projectile at the muzzle
-				World->SpawnActor<AArmorBlastingProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			// Try to create a linetrace shot
+			FHitResult HitResult;
+			bool bHitSomething = GetWorld()->LineTraceSingleByChannel(HitResult, SpawnLocation, SpawnLocation + 100000 * CameraForward, ECC_Visibility, QueryParams);
+
+			if (bHitSomething)
+			{
+				auto Actor = Cast<ABlastableActor>(HitResult.Actor);
+				if (Actor != nullptr)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Blasting object at position: (%f, %f, %f)!"), HitResult.Location.X, HitResult.Location.Y, HitResult.Location.Z);
+					Actor->Blast( HitResult.Location, 10);
+				}
 			}
+
 		}
 	}
 

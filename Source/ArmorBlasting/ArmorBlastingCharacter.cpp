@@ -11,7 +11,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "MotionControllerComponent.h"
 #include "BlastableActor.h"
+#include "DrawDebugHelpers.h"
+#include "BlastableComponent.h"
+#include "ArmorBlasting.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
+
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -149,29 +153,41 @@ void AArmorBlastingCharacter::OnFire()
 		{
 			const FRotator SpawnRotation = GetControlRotation();
 			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
-
+			// const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
+			const FVector SpawnLocation = GetFirstPersonCameraComponent()->GetComponentLocation();
 			// TODO finish Shoot code
 			auto CameraComponent = GetFirstPersonCameraComponent();
 			auto CameraForward = CameraComponent->GetComponentRotation().Vector();
 			CameraForward.Normalize();
 			FCollisionQueryParams QueryParams = FCollisionQueryParams::DefaultQueryParam;
 			QueryParams.AddIgnoredActor(this);
+			QueryParams.bTraceComplex = true;
 
+			// -- DEBUG ONLY -----------------------
+			if (GetWorld() != nullptr)
+			{
+				const FName TraceTag = TEXT("ShotTrace");
+				QueryParams.TraceTag = TraceTag;
+				GetWorld()->DebugDrawTraceTag = TraceTag;
+			}
+			// -------------------------------------
+			
 			// Try to create a linetrace shot
 			FHitResult HitResult;
-			bool bHitSomething = GetWorld()->LineTraceSingleByChannel(HitResult, SpawnLocation, SpawnLocation + 100000 * CameraForward, ECC_Visibility, QueryParams);
+			bool bHitSomething = GetWorld()->LineTraceSingleByChannel(HitResult, SpawnLocation, SpawnLocation + 100000 * CameraForward, ECC_Enemy, QueryParams);
 
+			// We have to check if what we hit provides a BlastableComponent
 			if (bHitSomething)
 			{
-				auto Actor = Cast<ABlastableActor>(HitResult.Actor);
-				if (Actor != nullptr)
+				auto Actor = HitResult.Actor;
+				auto BlastableComponent = Actor->FindComponentByClass<UBlastableComponent>();
+				
+				// if doesn't provide skeletal mesh, nothing to do
+				if (BlastableComponent != nullptr)
 				{
-					UE_LOG(LogTemp, Warning, TEXT("Blasting object at position: (%f, %f, %f)!"), HitResult.Location.X, HitResult.Location.Y, HitResult.Location.Z);
-					Actor->Blast( HitResult.Location, 10);
+					BlastableComponent->Blast(HitResult.Location, 10);
 				}
 			}
-
 		}
 	}
 

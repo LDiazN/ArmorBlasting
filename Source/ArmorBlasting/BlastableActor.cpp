@@ -15,12 +15,6 @@ ABlastableActor::ABlastableActor()
 	// Set up components
 	StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
 	SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
-	SceneCaptureComponent2D->bCaptureEveryFrame = false;
-	SceneCaptureComponent2D->bCaptureOnMovement = false;
-	SceneCaptureComponent2D->ShowOnlyActors.Add(this);
-	SceneCaptureComponent2D->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
-	SceneCaptureComponent2D->SetRelativeLocation({ 0,0,500 });
-	SceneCaptureComponent2D->SetRelativeRotation(FRotator{-90,-90,0});
 
 	SetRootComponent(StaticMeshComponent);
 	SceneCaptureComponent2D->AttachToComponent(RootComponent, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
@@ -45,10 +39,10 @@ void ABlastableActor::SetUpSceneRender2D()
 	SceneCaptureComponent2D->bCaptureOnMovement = false;
 	SceneCaptureComponent2D->ShowOnlyActors.Add(SceneCaptureComponent2D->GetOwner());
 	SceneCaptureComponent2D->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
-	SceneCaptureComponent2D->SetRelativeLocation({ 0,0,500 });
+	SceneCaptureComponent2D->SetRelativeLocation({ 0,0,512 });
 	SceneCaptureComponent2D->SetRelativeRotation(FRotator{ -90,-90,0 });
 	SceneCaptureComponent2D->ProjectionType = ECameraProjectionMode::Orthographic;
-	SceneCaptureComponent2D->OrthoWidth = 1000;
+	SceneCaptureComponent2D->OrthoWidth = 1024;
 }
 
 void ABlastableActor::SetUnwrapMaterial(UMaterial* Material)
@@ -66,7 +60,6 @@ void ABlastableActor::Tick(float DeltaTime)
 
 void ABlastableActor::UnwrapToRenderTarget(FVector HitLocation, float Radius)
 {
-
 	if (!IsValid(UnwrapMaterialInstance))
 		SetUnwrapMaterial(UnwrapMaterial);
 

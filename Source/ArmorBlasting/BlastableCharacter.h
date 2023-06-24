@@ -30,6 +30,9 @@ public:
 
 protected:
 
+	// UPROPERTY(EditAnywhere, Category = "Armor Blasting")
+	// UBlastableComponent* BlastableComponent;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Armor Blasting")
-	UBlastableComponent* BlastableComponent;
+	USkeletalMeshComponent* Armor;
 };

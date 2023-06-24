@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
+#include "BlastableActor.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
-#include "BlastableActor.h"
 
 // Sets default values
 ABlastableActor::ABlastableActor()

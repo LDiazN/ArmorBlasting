@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "BlastableComponent.h"
 #include "BlastableCharacter.h"
+#include "BlastableComponent.h"
 
 // Sets default values
 ABlastableCharacter::ABlastableCharacter()
@@ -9,8 +9,14 @@ ABlastableCharacter::ABlastableCharacter()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	BlastableComponent = CreateDefaultSubobject<UBlastableComponent>(TEXT("BlastableComponent"));
-	BlastableComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	// BlastableComponent = CreateDefaultSubobject<UBlastableComponent>(TEXT("BlastableComponent"));
+	// BlastableComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	Armor = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Armor"));
+	Armor->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+
+	// Use this tag to identify this mesh as the one to be blasted
+	Armor->ComponentTags.Add("BlastableMesh");
+	Armor->SetCollisionProfileName(FName("CharacterMesh"));
 
 }
 

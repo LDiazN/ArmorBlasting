@@ -39,7 +39,7 @@ protected:
 	/// Checks if this component is properly configured
 	/// </summary>
 	void CheckComponentConsistency() const;
-		
+
 protected:
 
 	/** Scene capture component used to capture a snapshot of the unwrapped character */
@@ -50,6 +50,10 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Resources")
 	UTextureRenderTarget2D* DamageRenderTarget;
 
+	/** Render target where the damage over time will be drawn */
+	UPROPERTY(EditAnywhere, Category = "Resources")
+	UTextureRenderTarget2D* TimeDamageRenderTarget;
+
 	/** Material used to unwrap the texture, an instance will be created in runtime */
 	UPROPERTY(EditAnywhere, Category = "Resources")
 	UMaterial* UnwrapMaterial;
@@ -58,9 +62,24 @@ protected:
 	UPROPERTY()
 	UMaterialInstanceDynamic* UnwrapMaterialInstance;
 
+	/** Material used to fade damange over time, an instance will be created in runtime */
+	UPROPERTY(EditAnywhere, Category = "Resources")
+	UMaterial* FadingMaterial;
+
+	/** Material instance used for fading damage */
+	UPROPERTY()
+	UMaterialInstanceDynamic* UnwrapFadingMaterialInstance;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Component")
+	USkeletalMeshComponent* BlastableMesh;
+
 	void SetUpSceneRender2D();
 
 	void SetUnwrapMaterial(UMaterial* Material);
+
+	void SetFadingMaterial(UMaterial* Material);
+
+	USkeletalMeshComponent* GetBlastableMesh() const { return BlastableMesh; }
 
 	/// <summary>
 	/// Access the skeletal mesh component from the owner, assume the owner is a character with a skeletal mesh

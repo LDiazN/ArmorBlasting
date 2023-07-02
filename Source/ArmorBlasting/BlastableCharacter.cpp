@@ -9,8 +9,8 @@ ABlastableCharacter::ABlastableCharacter()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	// BlastableComponent = CreateDefaultSubobject<UBlastableComponent>(TEXT("BlastableComponent"));
-	// BlastableComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	BlastableComponent = CreateDefaultSubobject<UBlastableComponent>(TEXT("BlastableComponent"));
+	BlastableComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 	Armor = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Armor"));
 	Armor->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 

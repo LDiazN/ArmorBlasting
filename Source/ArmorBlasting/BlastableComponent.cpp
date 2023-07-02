@@ -18,13 +18,6 @@ UBlastableComponent::UBlastableComponent()
 	SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
 	SceneCaptureComponent2D->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
-	// Create resources
-	DamageRenderTarget = CreateDefaultSubobject<UTextureRenderTarget2D>(TEXT("RT_Damage"));
-	DamageRenderTarget->ResizeTarget(1024, 1024);
-	TimeDamageRenderTarget = CreateDefaultSubobject<UTextureRenderTarget2D>(TEXT("RT_DamageOverTime"));
-	TimeDamageRenderTarget->ResizeTarget(1024, 1024);
-	DamageRenderTarget->ClearColor = FColor::Black;
-
 	SetUnwrapMaterial(UnwrapMaterial);
 	SetFadingMaterial(FadingMaterial);
 
@@ -36,6 +29,16 @@ UBlastableComponent::UBlastableComponent()
 void UBlastableComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	UE_LOG(LogTemp, Warning, TEXT("CALLING BEGIN PLAY FROM %s"), *(GetOwner()->GetName()));
+
+	// Set up render targets:
+	DamageRenderTarget = NewObject<UTextureRenderTarget2D>();
+	DamageRenderTarget->ResizeTarget(1024, 1024);
+	TimeDamageRenderTarget = NewObject<UTextureRenderTarget2D>();
+	TimeDamageRenderTarget->ResizeTarget(1024, 1024);
+	DamageRenderTarget->ClearColor = FColor::Black;
+	TimeDamageRenderTarget->ClearColor = FColor::Black;
+
 	CheckComponentConsistency();
 	// Find Component tagged with "BlastableMesh"
 	auto const Owner = GetOwner();
@@ -72,11 +75,18 @@ void UBlastableComponent::BeginPlay()
 		auto const Materials = Mesh->GetMaterials();
 		for (size_t i = 0; i < Materials.Num(); i++)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Creating dynamic material instances"));
-			auto DynamicMaterial = UMaterialInstanceDynamic::Create(Materials[i], this);
+			auto& Material = Materials[i];
+
+			// Check if this is a dynamic material instance:
+			if (Cast<UMaterialInstanceDynamic>(Material) != nullptr)
+				continue;
+
+			UE_LOG(LogTemp, Warning, TEXT("Creating dynamic material instances for blastable mesh"));
+			auto DynamicMaterial = UMaterialInstanceDynamic::Create(Material, this);
 			// Set the texture where this material instance will sample for damage
 			DynamicMaterial->SetTextureParameterValue(FName("RT_UnwrapDamage"), DamageRenderTarget);
-			Mesh->SetMaterial(i, DynamicMaterial);
+			if (DynamicMaterial != nullptr)
+				Mesh->SetMaterial(i, DynamicMaterial);
 		}
 	}
 }
@@ -94,16 +104,13 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 {
 	if (!IsValid(GetBlastableMesh()))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Error trying to unwrap to render target: Blastable Mesh not properly configured"));
+		UE_LOG(LogTemp, Error, TEXT("Error trying to unwrap to render target: Blastable Mesh not properly configured"));
 		return;
 	}
 
-	if (!IsValid(UnwrapMaterialInstance))
-		SetUnwrapMaterial(UnwrapMaterial);
-
 	if (!IsValid(UnwrapMaterialInstance) || !UnwrapMaterialInstance->IsValidLowLevel())
 	{
-		UE_LOG(LogTemp, Error, TEXT("Could not instance material"));
+		UE_LOG(LogTemp, Error, TEXT("Error trying to unwrap to render target: UnwrapMaterialInstance not properly set"));
 		return;
 	}
 
@@ -191,6 +198,13 @@ void UBlastableComponent::SetUnwrapMaterial(UMaterial* Material)
 	if (IsValid(Material) && IsValid(this))
 	{
 		UnwrapMaterialInstance = UMaterialInstanceDynamic::Create(Material, this, TEXT("UnwrapMaterialInstace"));
+		if (UnwrapMaterialInstance == nullptr)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Could not set up material instance for unwrap material"));
+			return;
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("Could not set up material instance for unwrap material"));
 	}
 }
 
@@ -198,8 +212,15 @@ void UBlastableComponent::SetFadingMaterial(UMaterial* Material)
 {
 	if (IsValid(Material) && IsValid(this))
 	{
-		UnwrapMaterialInstance->SetTextureParameterValue(FName("RT_FadingDamage"), TimeDamageRenderTarget);
-		UnwrapFadingMaterialInstance = UMaterialInstanceDynamic::Create(Material, this, TEXT("UnwrapMaterialInstace"));
+		UnwrapFadingMaterialInstance = UMaterialInstanceDynamic::Create(Material, this, TEXT("FadingMaterialInstace"));
+		UnwrapFadingMaterialInstance->SetTextureParameterValue(FName("RT_FadingDamage"), TimeDamageRenderTarget);
+		if (UnwrapFadingMaterialInstance == nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Could not set up material instance for fading material"));
+			return;
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("Could not set up material instance for fading material"));
 	}
 }
 

@@ -34,6 +34,9 @@ public:
 	/// <param name="Location">Location in world space where this object was hit</param>
 	void Blast(FVector Location, float ImpactRadius);
 
+	UFUNCTION(BlueprintCallable)
+	UTextureRenderTarget2D* GetRenderTarget() const { return DamageRenderTarget; }
+
 protected:
 	/// <summary>
 	/// Checks if this component is properly configured
@@ -47,11 +50,9 @@ protected:
 	USceneCaptureComponent2D* SceneCaptureComponent2D;
 
 	/** Render target where the unwrapped texture will be drawn */
-	UPROPERTY(EditAnywhere, Category = "Resources")
 	UTextureRenderTarget2D* DamageRenderTarget;
 
 	/** Render target where the damage over time will be drawn */
-	UPROPERTY(EditAnywhere, Category = "Resources")
 	UTextureRenderTarget2D* TimeDamageRenderTarget;
 
 	/** Material used to unwrap the texture, an instance will be created in runtime */

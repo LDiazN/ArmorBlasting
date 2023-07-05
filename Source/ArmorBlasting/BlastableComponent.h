@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/SceneComponent.h"
+#include "Components/SceneCaptureComponent.h"
 #include "BlastableComponent.generated.h"
 
 class USceneCaptureComponent2D;
@@ -47,7 +48,7 @@ protected:
 
 	/** Scene capture component used to capture a snapshot of the unwrapped character */
 	UPROPERTY(EditAnywhere, Category = "Components")
-	USceneCaptureComponent2D* SceneCaptureComponent2D;
+	USceneCaptureComponent2D* SceneCapture;
 
 	/** Render target where the unwrapped texture will be drawn */
 	UTextureRenderTarget2D* DamageRenderTarget;

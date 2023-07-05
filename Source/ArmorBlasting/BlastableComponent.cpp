@@ -15,11 +15,8 @@ UBlastableComponent::UBlastableComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	// Set up components
-	SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
-	SceneCaptureComponent2D->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-
-	SetUnwrapMaterial(UnwrapMaterial);
-	SetFadingMaterial(FadingMaterial);
+	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCapture"));
+	SceneCapture->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
 
 	SetUpSceneRender2D();
 }
@@ -30,6 +27,10 @@ void UBlastableComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	UE_LOG(LogTemp, Warning, TEXT("CALLING BEGIN PLAY FROM %s"), *(GetOwner()->GetName()));
+
+	// Set up dynamic materials
+	SetUnwrapMaterial(UnwrapMaterial);
+	SetFadingMaterial(FadingMaterial);
 
 	// Set up render targets:
 	DamageRenderTarget = NewObject<UTextureRenderTarget2D>();
@@ -116,15 +117,10 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 
 	// Store old material to restore it afterwards
 	USkeletalMeshComponent* MeshComponent = GetBlastableMesh();
-	if (MeshComponent == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Can't unwrap to render target since couldn't retrieve Actor's skeletal mesh."));
-		return;
-	}
 
 	// Original materials
 	auto const& Materials = MeshComponent->GetMaterials();
-
+	TArray<UMaterialInterface*> OldMaterials(Materials);
 	for (size_t i = 0; i < Materials.Num(); i++)
 	{
 		MeshComponent->SetMaterial(i, UnwrapMaterialInstance);
@@ -140,20 +136,20 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 		Mesh->SetVisibility(false);
 
 	// Capture scene in the right render target
-	SceneCaptureComponent2D->TextureTarget = DamageRenderTarget;
-	SceneCaptureComponent2D->CaptureScene();
+	SceneCapture->TextureTarget = DamageRenderTarget;
+	SceneCapture->CaptureScene();
 	
 	// Now repeat for the secondary render target
-	SceneCaptureComponent2D->TextureTarget = TimeDamageRenderTarget;
-	SceneCaptureComponent2D->CaptureScene();
+	SceneCapture->TextureTarget = TimeDamageRenderTarget;
+	SceneCapture->CaptureScene();
 
 	if (Mesh != nullptr)
 		Mesh->SetVisibility(true);
 
 	// Restore old materials
-	for (size_t i = 0; i < Materials.Num(); i++)
+	for (size_t i = 0; i < OldMaterials.Num(); i++)
 	{
-		auto const OldMaterial = Materials[i];
+		auto const OldMaterial = OldMaterials[i];
 		if (IsValid(OldMaterial))
 			MeshComponent->SetMaterial(i, OldMaterial);
 	}
@@ -182,15 +178,15 @@ void UBlastableComponent::CheckComponentConsistency() const
 
 void UBlastableComponent::SetUpSceneRender2D()
 {
-	SceneCaptureComponent2D->CompositeMode = SCCM_Additive;
-	SceneCaptureComponent2D->bCaptureEveryFrame = false;
-	SceneCaptureComponent2D->bCaptureOnMovement = false;
-	SceneCaptureComponent2D->ShowOnlyActors.Add(SceneCaptureComponent2D->GetOwner());
-	SceneCaptureComponent2D->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
-	SceneCaptureComponent2D->SetRelativeLocation({ 0,0,512 });
-	SceneCaptureComponent2D->SetRelativeRotation(FRotator{ -90,-90,0 });
-	SceneCaptureComponent2D->ProjectionType = ECameraProjectionMode::Orthographic;
-	SceneCaptureComponent2D->OrthoWidth = 1024;
+	SceneCapture->CompositeMode = SCCM_Additive;
+	SceneCapture->bCaptureEveryFrame = false;
+	SceneCapture->bCaptureOnMovement = false;
+	SceneCapture->ShowOnlyActors.Add(SceneCapture->GetOwner());
+	SceneCapture->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+	SceneCapture->SetRelativeLocation({ 0,0,512 });
+	SceneCapture->SetRelativeRotation(FRotator{ -90,-90,0 });
+	SceneCapture->ProjectionType = ECameraProjectionMode::Orthographic;
+	SceneCapture->OrthoWidth = 1024;
 }
 
 void UBlastableComponent::SetUnwrapMaterial(UMaterial* Material)
@@ -198,14 +194,17 @@ void UBlastableComponent::SetUnwrapMaterial(UMaterial* Material)
 	if (IsValid(Material) && IsValid(this))
 	{
 		UnwrapMaterialInstance = UMaterialInstanceDynamic::Create(Material, this, TEXT("UnwrapMaterialInstace"));
-		if (UnwrapMaterialInstance == nullptr)
+		if (UnwrapMaterialInstance == nullptr || !IsValid(UnwrapMaterialInstance))
 		{
 			UE_LOG(LogTemp, Error, TEXT("Could not set up material instance for unwrap material"));
 			return;
 		}
 
 		UE_LOG(LogTemp, Log, TEXT("Could not set up material instance for unwrap material"));
+		return;
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Could not set up UnwrapMaterial since the specified material is not valid"));
 }
 
 void UBlastableComponent::SetFadingMaterial(UMaterial* Material)

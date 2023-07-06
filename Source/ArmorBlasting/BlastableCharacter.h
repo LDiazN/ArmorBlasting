@@ -36,6 +36,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Armor Blasting")
 	UBlastableComponent* BlastableComponent;
 
-	UPROPERTY(EditDefaultsOnly, Category = "Armor Blasting")
-	USkeletalMeshComponent* Armor;
+	// UPROPERTY(EditDefaultsOnly, Category = "Armor Blasting")
+	// USkeletalMeshComponent* Armor;
 };

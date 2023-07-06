@@ -11,12 +11,12 @@ ABlastableCharacter::ABlastableCharacter()
 
 	BlastableComponent = CreateDefaultSubobject<UBlastableComponent>(TEXT("BlastableComponent"));
 	BlastableComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-	Armor = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Armor"));
-	Armor->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	// Armor = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Armor"));
+	// Armor->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
 
 	// Use this tag to identify this mesh as the one to be blasted
-	Armor->ComponentTags.Add("BlastableMesh");
-	Armor->SetCollisionProfileName(FName("CharacterMesh"));
+	// Armor->ComponentTags.Add("BlastableMesh");
+	// Armor->SetCollisionProfileName(FName("CharacterMesh"));
 
 }
 

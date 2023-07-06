@@ -47,22 +47,7 @@ void UBlastableComponent::BeginPlay()
 	// Set up Blastable mesh
 	if (Owner != nullptr)
 	{
-		auto const& Components = GetOwner()->GetComponentsByTag(USkeletalMeshComponent::StaticClass(), FName("BlastableMesh"));
-
-		// Check if everything went fine
-		if (Components.Num() < 1)
-		{
-			UE_LOG(LogTemp, Error, TEXT("Could not find any skeletal mesh component tagged with 'BlastableMesh', and therefore I could not set up UBlastableComponent"));
-		}
-		else
-		{
-			if (Components.Num() > 1)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("More than one mesh tagged with 'BlastableMesh', defaulting to the first one"));
-			}
-
-			BlastableMesh = Cast<USkeletalMeshComponent>(Components[0]);
-		}
+		BlastableMeshes = GetBlastableMeshSet();
 	}
 	else
 	{
@@ -70,9 +55,11 @@ void UBlastableComponent::BeginPlay()
 	}
 
 	// Set up material arguments for all possible sub materials
-	auto Mesh = GetBlastableMesh();
-	if (Mesh != nullptr)
+	for (auto const Mesh : BlastableMeshes)
 	{
+		if (Mesh == nullptr)
+			continue;
+
 		auto const Materials = Mesh->GetMaterials();
 		for (size_t i = 0; i < Materials.Num(); i++)
 		{
@@ -103,7 +90,7 @@ void UBlastableComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius)
 {
-	if (!IsValid(GetBlastableMesh()))
+	if (BlastableMeshes.Num() == 0)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Error trying to unwrap to render target: Blastable Mesh not properly configured"));
 		return;
@@ -115,44 +102,50 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 		return;
 	}
 
-	// Store old material to restore it afterwards
-	USkeletalMeshComponent* MeshComponent = GetBlastableMesh();
-
-	// Original materials
-	auto const& Materials = MeshComponent->GetMaterials();
-	TArray<UMaterialInterface*> OldMaterials(Materials);
-	for (size_t i = 0; i < Materials.Num(); i++)
-	{
-		MeshComponent->SetMaterial(i, UnwrapMaterialInstance);
-
-		// Set the right material for every submaterial
-		UnwrapMaterialInstance->SetScalarParameterValue(TEXT("DamageRadius"), Radius);
-		UnwrapMaterialInstance->SetVectorParameterValue(TEXT("HitLocation"), HitLocation);
-	}
-
-	// Capture Scene with just the unwrapped material and hit locations
 	auto const Mesh = GetMeshComponent();
 	if (Mesh != nullptr)
 		Mesh->SetVisibility(false);
 
-	// Capture scene in the right render target
-	SceneCapture->TextureTarget = DamageRenderTarget;
-	SceneCapture->CaptureScene();
+	// Store old material to restore it afterwards
+	for (auto const MeshComponent : BlastableMeshes)
+	{
+		// Sanity check
+		if (MeshComponent == nullptr)
+			continue;
+
+		// Original materials
+		auto const& Materials = MeshComponent->GetMaterials();
+		TArray<UMaterialInterface*> OldMaterials(Materials);
+		for (size_t i = 0; i < Materials.Num(); i++)
+		{
+			MeshComponent->SetMaterial(i, UnwrapMaterialInstance);
+
+			// Set the right material for every submaterial
+			UnwrapMaterialInstance->SetScalarParameterValue(TEXT("DamageRadius"), Radius);
+			UnwrapMaterialInstance->SetVectorParameterValue(TEXT("HitLocation"), HitLocation);
+		}
+
+		// Capture Scene with just the unwrapped material and hit locations
+
+		// Capture scene in the right render target
+		SceneCapture->TextureTarget = DamageRenderTarget;
+		SceneCapture->CaptureScene();
 	
-	// Now repeat for the secondary render target
-	SceneCapture->TextureTarget = TimeDamageRenderTarget;
-	SceneCapture->CaptureScene();
+		// Now repeat for the secondary render target
+		SceneCapture->TextureTarget = TimeDamageRenderTarget;
+		SceneCapture->CaptureScene();
+
+		// Restore old materials
+		for (size_t i = 0; i < OldMaterials.Num(); i++)
+		{
+			auto const OldMaterial = OldMaterials[i];
+			if (IsValid(OldMaterial))
+				MeshComponent->SetMaterial(i, OldMaterial);
+		}
+	}
 
 	if (Mesh != nullptr)
 		Mesh->SetVisibility(true);
-
-	// Restore old materials
-	for (size_t i = 0; i < OldMaterials.Num(); i++)
-	{
-		auto const OldMaterial = OldMaterials[i];
-		if (IsValid(OldMaterial))
-			MeshComponent->SetMaterial(i, OldMaterial);
-	}
 }
 
 void UBlastableComponent::Blast(FVector Location, float ImpactRadius)
@@ -221,6 +214,25 @@ void UBlastableComponent::SetFadingMaterial(UMaterial* Material)
 
 		UE_LOG(LogTemp, Log, TEXT("Could not set up material instance for fading material"));
 	}
+}
+
+TArray<UStaticMeshComponent *> UBlastableComponent::GetBlastableMeshSet() const
+{
+	AActor* Owner = GetOwner();
+	if (Owner != nullptr)
+	{
+		
+		auto ActorComponents = GetOwner()->GetComponentsByTag(UStaticMeshComponent::StaticClass(), FName("BlastableMesh"));
+		TArray<UStaticMeshComponent*> Meshes;
+
+		for (int i = 0; ActorComponents.Num(); i++)
+			Meshes.Push(Cast<UStaticMeshComponent>(ActorComponents[i]));
+
+		return Meshes;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Could not retrieve Mesh Components. Owner is NULL."));
+	return TArray<UStaticMeshComponent*>();
 }
 
 USkeletalMeshComponent* UBlastableComponent::GetMeshComponent() const

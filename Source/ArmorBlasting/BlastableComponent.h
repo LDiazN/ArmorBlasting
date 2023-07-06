@@ -73,7 +73,7 @@ protected:
 	UMaterialInstanceDynamic* UnwrapFadingMaterialInstance;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Component")
-	USkeletalMeshComponent* BlastableMesh;
+	TArray<UStaticMeshComponent*> BlastableMeshes;
 
 	void SetUpSceneRender2D();
 
@@ -81,7 +81,7 @@ protected:
 
 	void SetFadingMaterial(UMaterial* Material);
 
-	USkeletalMeshComponent* GetBlastableMesh() const { return BlastableMesh; }
+	TArray<UStaticMeshComponent*> GetBlastableMeshSet() const;
 
 	/// <summary>
 	/// Access the skeletal mesh component from the owner, assume the owner is a character with a skeletal mesh

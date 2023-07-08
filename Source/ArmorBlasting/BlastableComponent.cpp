@@ -5,6 +5,7 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "ArmorBlasting.h"
 #include "GameFramework/Character.h"
 
 // Sets default values for this component's properties
@@ -60,6 +61,9 @@ void UBlastableComponent::BeginPlay()
 		if (Mesh == nullptr)
 			continue;
 
+		Mesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		Mesh->SetCollisionResponseToChannel(ECC_Enemy, ECollisionResponse::ECR_Block);
+
 		auto const Materials = Mesh->GetMaterials();
 		for (size_t i = 0; i < Materials.Num(); i++)
 		{
@@ -107,6 +111,7 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 		Mesh->SetVisibility(false);
 
 	// Store old material to restore it afterwards
+	TArray<TArray<UMaterialInterface*>> OldMaterialsPerMesh;
 	for (auto const MeshComponent : BlastableMeshes)
 	{
 		// Sanity check
@@ -116,6 +121,7 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 		// Original materials
 		auto const& Materials = MeshComponent->GetMaterials();
 		TArray<UMaterialInterface*> OldMaterials(Materials);
+		OldMaterialsPerMesh.Add(OldMaterials);
 		for (size_t i = 0; i < Materials.Num(); i++)
 		{
 			MeshComponent->SetMaterial(i, UnwrapMaterialInstance);
@@ -124,6 +130,7 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 			UnwrapMaterialInstance->SetScalarParameterValue(TEXT("DamageRadius"), Radius);
 			UnwrapMaterialInstance->SetVectorParameterValue(TEXT("HitLocation"), HitLocation);
 		}
+	}
 
 		// Capture Scene with just the unwrapped material and hit locations
 
@@ -136,13 +143,9 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 		SceneCapture->CaptureScene();
 
 		// Restore old materials
-		for (size_t i = 0; i < OldMaterials.Num(); i++)
-		{
-			auto const OldMaterial = OldMaterials[i];
-			if (IsValid(OldMaterial))
-				MeshComponent->SetMaterial(i, OldMaterial);
-		}
-	}
+		for (int i = 0; i < BlastableMeshes.Num(); i++)
+			for (int j = 0; j < OldMaterialsPerMesh[i].Num(); j++)
+				BlastableMeshes[i]->SetMaterial(j, OldMaterialsPerMesh[i][j]);
 
 	if (Mesh != nullptr)
 		Mesh->SetVisibility(true);
@@ -224,9 +227,9 @@ TArray<UStaticMeshComponent *> UBlastableComponent::GetBlastableMeshSet() const
 		
 		auto ActorComponents = GetOwner()->GetComponentsByTag(UStaticMeshComponent::StaticClass(), FName("BlastableMesh"));
 		TArray<UStaticMeshComponent*> Meshes;
-
-		for (int i = 0; ActorComponents.Num(); i++)
-			Meshes.Push(Cast<UStaticMeshComponent>(ActorComponents[i]));
+		Meshes.Init(nullptr, ActorComponents.Num());
+		for (int i = 0; i < ActorComponents.Num(); i++)
+			Meshes[i] = (Cast<UStaticMeshComponent>(ActorComponents[i]));
 
 		return Meshes;
 	}

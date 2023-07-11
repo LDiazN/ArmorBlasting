@@ -18,7 +18,6 @@ UBlastableComponent::UBlastableComponent()
 	// Set up components
 	SceneCapture = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCapture"));
 	SceneCapture->AttachToComponent(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-
 	SetUpSceneRender2D();
 }
 
@@ -112,6 +111,12 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 
 	// Store old material to restore it afterwards
 	TArray<TArray<UMaterialInterface*>> OldMaterialsPerMesh;
+	FRotator OldRotation = SceneCapture->GetComponentRotation();
+	FVector OldPosition = SceneCapture->GetComponentLocation();
+
+	SceneCapture->SetWorldRotation(FRotator(-90, -90, 0));
+	SceneCapture->SetWorldLocation(GetOwner()->GetActorLocation() + FVector{0,0,512});
+
 	for (auto const MeshComponent : BlastableMeshes)
 	{
 		// Sanity check
@@ -149,6 +154,9 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 
 	if (Mesh != nullptr)
 		Mesh->SetVisibility(true);
+
+	SceneCapture->SetWorldRotation(OldRotation);
+	SceneCapture->SetWorldLocation(OldPosition);
 }
 
 void UBlastableComponent::Blast(FVector Location, float ImpactRadius)
@@ -187,6 +195,7 @@ void UBlastableComponent::SetUpSceneRender2D()
 	SceneCapture->ShowFlags.AmbientCubemap = 0;
 	SceneCapture->ShowFlags.Lighting = 0;
 	SceneCapture->ShowFlags.PostProcessing = 0;
+	// descomentar para evitar fondo azul en unwrap
 }
 
 void UBlastableComponent::SetUnwrapMaterial(UMaterial* Material)

@@ -43,6 +43,8 @@ void ABlastableActor::SetUpSceneRender2D()
 	SceneCaptureComponent2D->SetRelativeRotation(FRotator{ -90,-90,0 });
 	SceneCaptureComponent2D->ProjectionType = ECameraProjectionMode::Orthographic;
 	SceneCaptureComponent2D->OrthoWidth = 1024;
+	SceneCaptureComponent2D->ShowFlags.Atmosphere = 0;
+	SceneCaptureComponent2D->ShowFlags.AmbientCubemap = 0;
 }
 
 void ABlastableActor::SetUnwrapMaterial(UMaterial* Material)

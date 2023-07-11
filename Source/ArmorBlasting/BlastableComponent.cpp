@@ -183,6 +183,10 @@ void UBlastableComponent::SetUpSceneRender2D()
 	SceneCapture->SetRelativeRotation(FRotator{ -90,-90,0 });
 	SceneCapture->ProjectionType = ECameraProjectionMode::Orthographic;
 	SceneCapture->OrthoWidth = 1024;
+	SceneCapture->ShowFlags.Atmosphere = 0;
+	SceneCapture->ShowFlags.AmbientCubemap = 0;
+	SceneCapture->ShowFlags.Lighting = 0;
+	SceneCapture->ShowFlags.PostProcessing = 0;
 }
 
 void UBlastableComponent::SetUnwrapMaterial(UMaterial* Material)

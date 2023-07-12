@@ -195,7 +195,6 @@ void UBlastableComponent::SetUpSceneRender2D()
 	SceneCapture->ShowFlags.AmbientCubemap = 0;
 	SceneCapture->ShowFlags.Lighting = 0;
 	SceneCapture->ShowFlags.PostProcessing = 0;
-	// descomentar para evitar fondo azul en unwrap
 }
 
 void UBlastableComponent::SetUnwrapMaterial(UMaterial* Material)

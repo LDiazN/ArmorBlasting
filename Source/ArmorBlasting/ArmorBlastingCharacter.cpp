@@ -185,7 +185,7 @@ void AArmorBlastingCharacter::OnFire()
 				// if doesn't provide skeletal mesh, nothing to do
 				if (BlastableComponent != nullptr)
 				{
-					BlastableComponent->Blast(HitResult.Location, 10);
+					BlastableComponent->Blast(HitResult.Location, 4);
 				}
 			}
 		}

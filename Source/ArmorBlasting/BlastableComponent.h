@@ -36,7 +36,7 @@ public:
 	void Blast(FVector Location, float ImpactRadius);
 
 	UFUNCTION(BlueprintCallable)
-	UTextureRenderTarget2D* GetRenderTarget() const { return DamageRenderTarget; }
+	UTextureRenderTarget2D* GetRenderTarget() const { return TimeDamageRenderTarget; } // TODO: Devolver esto a DamageRenderTarget
 
 protected:
 	/// <summary>

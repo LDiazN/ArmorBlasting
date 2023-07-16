@@ -5,7 +5,10 @@
 #include "Engine/TextureRenderTarget2D.h"
 #include "Materials/Material.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Kismet/KismetRenderingLibrary.h"
+#include "Engine/Canvas.h"
 #include "ArmorBlasting.h"
+#include "Engine/CanvasRenderTarget2D.h"
 #include "GameFramework/Character.h"
 
 // Sets default values for this component's properties
@@ -28,17 +31,20 @@ void UBlastableComponent::BeginPlay()
 	Super::BeginPlay();
 	UE_LOG(LogTemp, Warning, TEXT("CALLING BEGIN PLAY FROM %s"), *(GetOwner()->GetName()));
 
-	// Set up dynamic materials
-	SetUnwrapMaterial(UnwrapMaterial);
-	SetFadingMaterial(FadingMaterial);
 
 	// Set up render targets:
 	DamageRenderTarget = NewObject<UTextureRenderTarget2D>();
 	DamageRenderTarget->ResizeTarget(1024, 1024);
-	TimeDamageRenderTarget = NewObject<UTextureRenderTarget2D>();
-	TimeDamageRenderTarget->ResizeTarget(1024, 1024);
 	DamageRenderTarget->ClearColor = FColor::Black;
-	TimeDamageRenderTarget->ClearColor = FColor::Black;
+
+	// Set up TimeDamageRenderTarget. Since we're using it to fade the damage using canvas, then we create it as 
+	// a CanvasRenderTarget
+	TimeDamageRenderTarget = Cast<UCanvasRenderTarget2D>(UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(this, UCanvasRenderTarget2D::StaticClass(), 1024, 1024));
+	TimeDamageRenderTarget->OnCanvasRenderTargetUpdate.AddDynamic(this, &UBlastableComponent::UpdateFadingDamageRenderTarget);
+
+	// Set up dynamic materials
+	SetUnwrapMaterial(UnwrapMaterial);
+	SetFadingMaterial(FadingMaterial);
 
 	CheckComponentConsistency();
 	// Find Component tagged with "BlastableMesh"
@@ -91,6 +97,7 @@ void UBlastableComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	TimeDamageRenderTarget->UpdateResource();
 	// ...
 }
 
@@ -223,7 +230,7 @@ void UBlastableComponent::SetFadingMaterial(UMaterial* Material)
 	if (IsValid(Material) && IsValid(this))
 	{
 		UnwrapFadingMaterialInstance = UMaterialInstanceDynamic::Create(Material, this, TEXT("FadingMaterialInstace"));
-		UnwrapFadingMaterialInstance->SetTextureParameterValue(FName("RT_FadingDamage"), TimeDamageRenderTarget);
+		UnwrapFadingMaterialInstance->SetTextureParameterValue(FName("RT_FadingTexture"), TimeDamageRenderTarget);
 		if (UnwrapFadingMaterialInstance == nullptr)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Could not set up material instance for fading material"));
@@ -251,6 +258,15 @@ TArray<UStaticMeshComponent *> UBlastableComponent::GetBlastableMeshSet() const
 
 	UE_LOG(LogTemp, Warning, TEXT("Could not retrieve Mesh Components. Owner is NULL."));
 	return TArray<UStaticMeshComponent*>();
+}
+
+void UBlastableComponent::UpdateFadingDamageRenderTarget(UCanvas* Canvas, int32 Width, int32 Height)
+{
+	FVector2D Size(Width, Height);
+
+	// Begin a Draw Canvas To Render Target to render the material that fades the render target
+	Canvas->SetDrawColor(FColor::White);
+	Canvas->K2_DrawMaterial(UnwrapFadingMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
 }
 
 USkeletalMeshComponent* UBlastableComponent::GetMeshComponent() const

@@ -23,6 +23,7 @@ ABlastableActor::ABlastableActor()
 	DamageRenderTarget = CreateDefaultSubobject<UTextureRenderTarget2D>(TEXT("DamageRenderTarget"));
 	SetUnwrapMaterial(CreateDefaultSubobject<UMaterial>(TEXT("UnwrapMaterial")));
 
+
 	SetUpSceneRender2D();
 }
 

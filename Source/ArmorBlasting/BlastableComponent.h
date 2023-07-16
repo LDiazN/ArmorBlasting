@@ -40,7 +40,14 @@ public:
 	void Blast(FVector Location, float ImpactRadius);
 
 	UFUNCTION(BlueprintCallable)
-	UTextureRenderTarget2D* GetRenderTarget() const { return Cast<UTextureRenderTarget2D>(TimeDamageRenderTarget); } // TODO: Devolver esto a DamageRenderTarget
+	UTextureRenderTarget2D* GetDamageRenderTarget() const { return DamageRenderTarget; } // TODO: Devolver esto a DamageRenderTarget
+
+	UFUNCTION(BlueprintCallable)
+	UTextureRenderTarget2D* GetTimeDamageRenderTarget() const { return Cast<UTextureRenderTarget2D>(TimeDamageRenderTarget); } // TODO: Devolver esto a DamageRenderTarget
+
+	UFUNCTION(BlueprintCallable)
+	UTextureRenderTarget2D* GetTimeDamageBackupRenderTarget() const { 
+		return TimeDamageRenderTargetBackup; } // TODO: Devolver esto a DamageRenderTarget
 
 protected:
 	/// <summary>
@@ -59,7 +66,7 @@ protected:
 	TArray<UStaticMeshComponent*> GetBlastableMeshSet() const;
 
 	UFUNCTION()
-	void UpdateFadingDamageRenderTarget(UCanvas* Canvas, int32 Width, int32 Height);
+	void UpdateFadingDamageRenderTarget();
 
 	/// <summary>
 	/// Access the skeletal mesh component from the owner, assume the owner is a character with a skeletal mesh
@@ -75,7 +82,14 @@ protected:
 	UTextureRenderTarget2D* DamageRenderTarget;
 
 	/** Render target where the damage over time will be drawn */
-	UCanvasRenderTarget2D* TimeDamageRenderTarget;
+	UTextureRenderTarget2D* TimeDamageRenderTarget;
+
+	/** Render target where the damage over time will be stored so that it can be sampled from the material
+		without suffering from clearing the render target before actually drawing the fading material
+		that requires the previous content.
+	*/
+	UTextureRenderTarget2D* TimeDamageRenderTargetBackup;
+
 
 	/** Material used to unwrap the texture, an instance will be created in runtime */
 	UPROPERTY(EditAnywhere, Category = "Resources")
@@ -104,5 +118,7 @@ protected:
 	/// Used to repeat fading damage material 
 	/// </summary>
 	FTimerHandle DamageFadingTimerHandle;
+
+	bool bBlastJustReceived = false;
 
 };

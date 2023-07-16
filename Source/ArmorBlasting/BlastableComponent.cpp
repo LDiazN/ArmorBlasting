@@ -34,13 +34,21 @@ void UBlastableComponent::BeginPlay()
 
 	// Set up render targets:
 	DamageRenderTarget = NewObject<UTextureRenderTarget2D>();
+	DamageRenderTarget->Rename(TEXT("DamageRenderTarget"));
 	DamageRenderTarget->ResizeTarget(1024, 1024);
 	DamageRenderTarget->ClearColor = FColor::Black;
 
 	// Set up TimeDamageRenderTarget. Since we're using it to fade the damage using canvas, then we create it as 
 	// a CanvasRenderTarget
-	TimeDamageRenderTarget = Cast<UCanvasRenderTarget2D>(UCanvasRenderTarget2D::CreateCanvasRenderTarget2D(this, UCanvasRenderTarget2D::StaticClass(), 1024, 1024));
-	TimeDamageRenderTarget->OnCanvasRenderTargetUpdate.AddDynamic(this, &UBlastableComponent::UpdateFadingDamageRenderTarget);
+	TimeDamageRenderTarget = NewObject<UTextureRenderTarget2D>();
+	TimeDamageRenderTarget->Rename(TEXT("TimeDamageRenderTarget"));
+	TimeDamageRenderTarget->ResizeTarget(1024, 1024);
+	TimeDamageRenderTarget->ClearColor = FColor::Black;
+
+	TimeDamageRenderTargetBackup = NewObject<UTextureRenderTarget2D>();
+	TimeDamageRenderTargetBackup->Rename(TEXT("TimeDamageBackupRenderTarget"));
+	TimeDamageRenderTargetBackup->ResizeTarget(1024, 1024);
+	TimeDamageRenderTargetBackup->ClearColor = FColor::Black;
 
 	// Set up dynamic materials
 	SetUnwrapMaterial(UnwrapMaterial);
@@ -89,6 +97,13 @@ void UBlastableComponent::BeginPlay()
 				Mesh->SetMaterial(i, DynamicMaterial);
 		}
 	}
+
+	// Start timer to update fading
+	auto World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().SetTimer(DamageFadingTimerHandle, this, &UBlastableComponent::UpdateFadingDamageRenderTarget, 0.1, true, 0);
+	}
 }
 
 
@@ -97,7 +112,6 @@ void UBlastableComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	TimeDamageRenderTarget->UpdateResource();
 	// ...
 }
 
@@ -172,6 +186,7 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 void UBlastableComponent::Blast(FVector Location, float ImpactRadius)
 {
 	UnwrapToRenderTarget(Location, ImpactRadius);
+	bBlastJustReceived = true;
 }
 
 void UBlastableComponent::CheckComponentConsistency() const
@@ -230,7 +245,7 @@ void UBlastableComponent::SetFadingMaterial(UMaterial* Material)
 	if (IsValid(Material) && IsValid(this))
 	{
 		UnwrapFadingMaterialInstance = UMaterialInstanceDynamic::Create(Material, this, TEXT("FadingMaterialInstace"));
-		UnwrapFadingMaterialInstance->SetTextureParameterValue(FName("RT_FadingTexture"), TimeDamageRenderTarget);
+		UnwrapFadingMaterialInstance->SetTextureParameterValue(FName("RT_FadingTexture"), TimeDamageRenderTargetBackup);
 		if (UnwrapFadingMaterialInstance == nullptr)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Could not set up material instance for fading material"));
@@ -260,13 +275,30 @@ TArray<UStaticMeshComponent *> UBlastableComponent::GetBlastableMeshSet() const
 	return TArray<UStaticMeshComponent*>();
 }
 
-void UBlastableComponent::UpdateFadingDamageRenderTarget(UCanvas* Canvas, int32 Width, int32 Height)
+void UBlastableComponent::UpdateFadingDamageRenderTarget()
 {
-	FVector2D Size(Width, Height);
+	FVector2D Size;
+	if (bBlastJustReceived)
+		bBlastJustReceived = false;
+
+	// Store what we draw 
+	UCanvas* Canvas;
+	FDrawToRenderTargetContext Context;
+	UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(this, TimeDamageRenderTargetBackup, Canvas, Size, Context);
+	{
+		// No está guardando la textura vieja en la nueva, arreglar TODO
+		Canvas->K2_DrawTexture(TimeDamageRenderTarget, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
+	}
+	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, Context);
+	Canvas = nullptr;
 
 	// Begin a Draw Canvas To Render Target to render the material that fades the render target
-	Canvas->SetDrawColor(FColor::White);
-	Canvas->K2_DrawMaterial(UnwrapFadingMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
+	UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(this, TimeDamageRenderTarget, Canvas, Size, Context);
+	{
+		// Canvas->K2_DrawMaterial(UnwrapFadingMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
+	}
+	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, Context);
+
 }
 
 USkeletalMeshComponent* UBlastableComponent::GetMeshComponent() const

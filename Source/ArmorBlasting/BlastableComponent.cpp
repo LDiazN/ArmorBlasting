@@ -102,7 +102,7 @@ void UBlastableComponent::BeginPlay()
 	auto World = GetWorld();
 	if (World)
 	{
-		World->GetTimerManager().SetTimer(DamageFadingTimerHandle, this, &UBlastableComponent::UpdateFadingDamageRenderTarget, 0.1, true, 0);
+		World->GetTimerManager().SetTimer(DamageFadingTimerHandle, this, &UBlastableComponent::UpdateFadingDamageRenderTarget, 0.10, true, 0);
 	}
 }
 
@@ -232,9 +232,6 @@ void UBlastableComponent::SetUnwrapMaterial(UMaterial* Material)
 			UE_LOG(LogTemp, Error, TEXT("Could not set up material instance for unwrap material"));
 			return;
 		}
-
-		UE_LOG(LogTemp, Log, TEXT("Could not set up material instance for unwrap material"));
-		return;
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("Could not set up UnwrapMaterial since the specified material is not valid"));
@@ -251,8 +248,21 @@ void UBlastableComponent::SetFadingMaterial(UMaterial* Material)
 			UE_LOG(LogTemp, Warning, TEXT("Could not set up material instance for fading material"));
 			return;
 		}
+	}
 
-		UE_LOG(LogTemp, Log, TEXT("Could not set up material instance for fading material"));
+	if (IsValid(TextureSampleEmissiveMaterial) && IsValid(this))
+	{
+		TextureSampleEmissiveMaterialInstance = UMaterialInstanceDynamic::Create(
+													TextureSampleEmissiveMaterial, 
+													this, 
+													TEXT("TextureSampleEmissiveMaterialInstance"));
+		if (TextureSampleEmissiveMaterialInstance == nullptr)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Could not set up material instance for texture sample material"));
+			return;
+		}
+
+		TextureSampleEmissiveMaterialInstance->SetTextureParameterValue(FName("Texture"), TimeDamageRenderTarget);
 	}
 }
 
@@ -287,7 +297,8 @@ void UBlastableComponent::UpdateFadingDamageRenderTarget()
 	UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(this, TimeDamageRenderTargetBackup, Canvas, Size, Context);
 	{
 		// No está guardando la textura vieja en la nueva, arreglar TODO
-		Canvas->K2_DrawTexture(TimeDamageRenderTarget, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
+		Canvas->K2_DrawMaterial(TextureSampleEmissiveMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
+		UE_LOG(LogTemp, Warning, TEXT("Trying to render texture to backup"))
 	}
 	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, Context);
 	Canvas = nullptr;
@@ -295,7 +306,7 @@ void UBlastableComponent::UpdateFadingDamageRenderTarget()
 	// Begin a Draw Canvas To Render Target to render the material that fades the render target
 	UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(this, TimeDamageRenderTarget, Canvas, Size, Context);
 	{
-		// Canvas->K2_DrawMaterial(UnwrapFadingMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
+		Canvas->K2_DrawMaterial(UnwrapFadingMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
 	}
 	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, Context);
 

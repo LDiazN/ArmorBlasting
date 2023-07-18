@@ -164,12 +164,12 @@ void AArmorBlastingCharacter::OnFire()
 			QueryParams.bTraceComplex = true;
 
 			// -- DEBUG ONLY -----------------------
-			if (GetWorld() != nullptr)
-			{
-				const FName TraceTag = TEXT("ShotTrace");
-				QueryParams.TraceTag = TraceTag;
-				GetWorld()->DebugDrawTraceTag = TraceTag;
-			}
+			// if (GetWorld() != nullptr)
+			// {
+			// 	const FName TraceTag = TEXT("ShotTrace");
+			// 	QueryParams.TraceTag = TraceTag;
+			// 	GetWorld()->DebugDrawTraceTag = TraceTag;
+			// }
 			// -------------------------------------
 			
 			// Try to create a linetrace shot

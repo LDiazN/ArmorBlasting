@@ -107,6 +107,14 @@ protected:
 	UPROPERTY()
 	UMaterialInstanceDynamic* UnwrapFadingMaterialInstance;
 
+	/** Material to draw a texture  over a surface using just the emmisive channel */
+	UPROPERTY(EditAnywhere, Category = "Resources")
+	UMaterial* TextureSampleEmissiveMaterial;
+
+	/** Material instance used to draw fading damage to backup texture */
+	UPROPERTY()
+	UMaterialInstanceDynamic* TextureSampleEmissiveMaterialInstance;
+
 	/** How much time every damage mark takes to dissapear */
 	UPROPERTY(EditAnywhere, Category = "VFX")
 	float TimeToVanishDamage = 2.f;

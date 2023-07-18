@@ -124,6 +124,7 @@ void AArmorBlastingCharacter::SetupPlayerInputComponent(class UInputComponent* P
 
 	// Bind fire event
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AArmorBlastingCharacter::OnFire);
+	PlayerInputComponent->BindAxis("SwapWeapon", this, &AArmorBlastingCharacter::SwapGun);
 
 	// Enable touchscreen input
 	EnableTouchscreenMovement(PlayerInputComponent);
@@ -144,6 +145,39 @@ void AArmorBlastingCharacter::SetupPlayerInputComponent(class UInputComponent* P
 }
 
 void AArmorBlastingCharacter::OnFire()
+{
+	switch (CurrentShootingMode)
+	{
+		case ShootModes::Semiauto:
+			ShootSemiAuto();
+			break;
+		case ShootModes::Shotgun:
+			ShootShotgun();
+			break;
+		default:
+			UE_LOG(LogTemp, Warning, TEXT("Unsupported type of shot"));
+			break;
+	}
+
+	// try and play the sound if specified
+	if (FireSound != NULL)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
+	}
+
+	// try and play a firing animation if specified
+	if (FireAnimation != NULL)
+	{
+		// Get the animation object for the arms mesh
+		UAnimInstance* AnimInstance = Mesh1P->GetAnimInstance();
+		if (AnimInstance != NULL)
+		{
+			AnimInstance->Montage_Play(FireAnimation, 1.f);
+		}
+	}
+}
+
+void AArmorBlastingCharacter::ShootSemiAuto()
 {
 	// try and fire a projectile
 	if (ProjectileClass != NULL)
@@ -171,7 +205,7 @@ void AArmorBlastingCharacter::OnFire()
 			// 	GetWorld()->DebugDrawTraceTag = TraceTag;
 			// }
 			// -------------------------------------
-			
+
 			// Try to create a linetrace shot
 			FHitResult HitResult;
 			bool bHitSomething = GetWorld()->LineTraceSingleByChannel(HitResult, SpawnLocation, SpawnLocation + 100000 * CameraForward, ECC_Enemy, QueryParams);
@@ -181,32 +215,37 @@ void AArmorBlastingCharacter::OnFire()
 			{
 				auto Actor = HitResult.Actor;
 				auto BlastableComponent = Actor->FindComponentByClass<UBlastableComponent>();
-				
+
 				// if doesn't provide skeletal mesh, nothing to do
 				if (BlastableComponent != nullptr)
 				{
-					BlastableComponent->Blast(HitResult.Location, 4);
+					BlastableComponent->Blast(HitResult.Location, 5);
 				}
 			}
 		}
 	}
+}
 
-	// try and play the sound if specified
-	if (FireSound != NULL)
-	{
-		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
-	}
+void AArmorBlastingCharacter::ShootShotgun()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Boom, chchk!"));
+}
 
-	// try and play a firing animation if specified
-	if (FireAnimation != NULL)
-	{
-		// Get the animation object for the arms mesh
-		UAnimInstance* AnimInstance = Mesh1P->GetAnimInstance();
-		if (AnimInstance != NULL)
-		{
-			AnimInstance->Montage_Play(FireAnimation, 1.f);
-		}
-	}
+void AArmorBlastingCharacter::SwapGun(float Val)
+{
+	// If no input, do nothing
+	if (FMath::IsNearlyZero(Val))
+		return;
+
+	auto AmountModes = static_cast<int>(ShootModes::N_SHOOT_MODES);
+	auto CurrentModeInt = static_cast<int>(CurrentShootingMode);
+	auto direction = Val > 0 ? 1 : -1;
+
+	// Note that mode applies the same for negative numbers, so if we go down from 0, we need to go back to 
+	// the highest value
+	auto NextMode = Val == -1 && CurrentModeInt == 0 ? AmountModes - 1 : (CurrentModeInt + 1) % AmountModes;
+
+	CurrentShootingMode = static_cast<ShootModes>(NextMode);
 }
 
 void AArmorBlastingCharacter::OnResetVR()

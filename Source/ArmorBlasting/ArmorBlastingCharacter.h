@@ -52,6 +52,14 @@ protected:
 	virtual void BeginPlay();
 
 public:
+
+	enum class ShootModes {
+		Semiauto,
+		Shotgun,
+		Auto,
+		N_SHOOT_MODES
+	};
+
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseTurnRate;
@@ -80,10 +88,24 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	uint32 bUsingMotionControllers : 1;
 
+	ShootModes CurrentShootingMode = ShootModes::Semiauto;
+
 protected:
 	
 	/** Fires a projectile. */
 	void OnFire();
+
+	/** Shoot a single shot */
+	void ShootSemiAuto();
+
+	/** Shoot a shotgun */
+	void ShootShotgun();
+
+	/// <summary>
+	/// Swap weapon in the direction specified by `Val`
+	/// </summary>
+	/// <param name="Val"> Direction to swap weapons </param>
+	void SwapGun(float Val);
 
 	/** Resets HMD orientation and position in VR. */
 	void OnResetVR();

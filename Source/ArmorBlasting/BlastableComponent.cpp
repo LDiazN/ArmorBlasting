@@ -298,7 +298,6 @@ void UBlastableComponent::UpdateFadingDamageRenderTarget()
 	{
 		// No está guardando la textura vieja en la nueva, arreglar TODO
 		Canvas->K2_DrawMaterial(TextureSampleEmissiveMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
-		UE_LOG(LogTemp, Warning, TEXT("Trying to render texture to backup"))
 	}
 	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, Context);
 	Canvas = nullptr;

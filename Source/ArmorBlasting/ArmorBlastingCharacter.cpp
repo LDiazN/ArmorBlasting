@@ -14,6 +14,7 @@
 #include "DrawDebugHelpers.h"
 #include "BlastableComponent.h"
 #include "ArmorBlasting.h"
+#include "Math/UnrealMathUtility.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 
 
@@ -180,55 +181,135 @@ void AArmorBlastingCharacter::OnFire()
 void AArmorBlastingCharacter::ShootSemiAuto()
 {
 	// try and fire a projectile
-	if (ProjectileClass != NULL)
+	if (ProjectileClass == NULL) return;
+
+	UWorld* const World = GetWorld();
+	if (World == NULL) return;
+
+	const FRotator SpawnRotation = GetControlRotation();
+	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+	// const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
+	const FVector SpawnLocation = GetFirstPersonCameraComponent()->GetComponentLocation();
+	// TODO finish Shoot code
+	auto CameraComponent = GetFirstPersonCameraComponent();
+	auto CameraForward = CameraComponent->GetComponentRotation().Vector();
+	CameraForward.Normalize();
+	FCollisionQueryParams QueryParams = FCollisionQueryParams::DefaultQueryParam;
+	QueryParams.AddIgnoredActor(this);
+	QueryParams.bTraceComplex = true;
+
+	// -- DEBUG ONLY -----------------------
+	// if (GetWorld() != nullptr)
+	// {
+	// 	const FName TraceTag = TEXT("ShotTrace");
+	// 	QueryParams.TraceTag = TraceTag;
+	// 	GetWorld()->DebugDrawTraceTag = TraceTag;
+	// }
+	// -------------------------------------
+
+	// Try to create a linetrace shot
+	FHitResult HitResult;
+	bool bHitSomething = GetWorld()->LineTraceSingleByChannel(HitResult, SpawnLocation, SpawnLocation + 100000 * CameraForward, ECC_Enemy, QueryParams);
+
+	// We have to check if what we hit provides a BlastableComponent
+	if (bHitSomething)
 	{
-		UWorld* const World = GetWorld();
-		if (World != NULL)
+		auto Actor = HitResult.Actor;
+		auto BlastableComponent = Actor->FindComponentByClass<UBlastableComponent>();
+
+		// if doesn't provide skeletal mesh, nothing to do
+		if (BlastableComponent != nullptr)
 		{
-			const FRotator SpawnRotation = GetControlRotation();
-			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-			// const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
-			const FVector SpawnLocation = GetFirstPersonCameraComponent()->GetComponentLocation();
-			// TODO finish Shoot code
-			auto CameraComponent = GetFirstPersonCameraComponent();
-			auto CameraForward = CameraComponent->GetComponentRotation().Vector();
-			CameraForward.Normalize();
-			FCollisionQueryParams QueryParams = FCollisionQueryParams::DefaultQueryParam;
-			QueryParams.AddIgnoredActor(this);
-			QueryParams.bTraceComplex = true;
-
-			// -- DEBUG ONLY -----------------------
-			// if (GetWorld() != nullptr)
-			// {
-			// 	const FName TraceTag = TEXT("ShotTrace");
-			// 	QueryParams.TraceTag = TraceTag;
-			// 	GetWorld()->DebugDrawTraceTag = TraceTag;
-			// }
-			// -------------------------------------
-
-			// Try to create a linetrace shot
-			FHitResult HitResult;
-			bool bHitSomething = GetWorld()->LineTraceSingleByChannel(HitResult, SpawnLocation, SpawnLocation + 100000 * CameraForward, ECC_Enemy, QueryParams);
-
-			// We have to check if what we hit provides a BlastableComponent
-			if (bHitSomething)
-			{
-				auto Actor = HitResult.Actor;
-				auto BlastableComponent = Actor->FindComponentByClass<UBlastableComponent>();
-
-				// if doesn't provide skeletal mesh, nothing to do
-				if (BlastableComponent != nullptr)
-				{
-					BlastableComponent->Blast(HitResult.Location, 5);
-				}
-			}
+			BlastableComponent->Blast(HitResult.Location, 5);
 		}
 	}
 }
 
 void AArmorBlastingCharacter::ShootShotgun()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Boom, chchk!"));
+	// try and fire a projectile
+	if (ProjectileClass == NULL) return;
+
+	UWorld* const World = GetWorld();
+	if (World == NULL) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("Pum, chchk!"));
+
+	const FRotator SpawnRotation = GetControlRotation();
+	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+	// const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
+	const FVector SpawnLocation = GetFirstPersonCameraComponent()->GetComponentLocation();
+	// TODO finish Shoot code
+	auto CameraComponent = GetFirstPersonCameraComponent();
+	// auto CameraForward = CameraComponent->GetComponentRotation().Vector
+	
+	auto CameraForward = CameraComponent->GetForwardVector();
+	auto CameraUp = CameraComponent->GetUpVector();
+	auto CameraRight = CameraComponent->GetRightVector();
+
+	// To Shoot the shotgun you have to compute many rays around the center of the shotgun reticle. They all
+	// have the same origin but might have different end points. The endpoints will be randombly distributed 
+	// around a circle at the end of the main ray
+
+	// Config parameters
+	const float MaxSpreadRadius = 30;
+	const float MaxRange = 1000;
+	const FVector CentralEndpoint = SpawnLocation + CameraForward * MaxRange;
+	const int NShots = 15;
+	const float MaxShotImpactRadius = 6;
+	const float MinShotImpactRadius = 2;
+
+	for (int i = 0; i < NShots; i++)
+	{
+		// Compute radius and rotation for this endpoint
+		const float Radius = FMath::FRand() * MaxSpreadRadius;
+		const float Rotation = FMath::FRand() * 2.f * PI;
+
+
+		// Endpoint is where to point to
+		const FVector Endpoint =	CentralEndpoint + 
+									CameraRight * Radius * FMath::Cos(Rotation) + 
+									CameraUp    * Radius * FMath::Sin(Rotation);
+
+		// Impact Radius is how big the holes are in the impact point
+		const float ImpactRadius = FMath::Lerp(MinShotImpactRadius, MaxShotImpactRadius, Radius / MaxSpreadRadius);
+
+		// Ray Cast!
+		FCollisionQueryParams QueryParams = FCollisionQueryParams::DefaultQueryParam;
+		QueryParams.AddIgnoredActor(this);
+		QueryParams.bTraceComplex = true;
+
+		// -- DEBUG ONLY -----------------------
+		if (GetWorld() != nullptr)
+		{
+			const FName TraceTag = TEXT("ShotTrace");
+			QueryParams.TraceTag = TraceTag;
+			GetWorld()->DebugDrawTraceTag = TraceTag;
+		}
+		// -------------------------------------
+
+		// Try to create a linetrace shot
+		FHitResult HitResult;
+		bool bHitSomething = GetWorld()->LineTraceSingleByChannel(
+											HitResult, 
+											SpawnLocation, 
+											SpawnLocation + MaxRange * CameraForward, 
+											ECC_Enemy, 
+											QueryParams
+							);
+		// We have to check if what we hit provides a BlastableComponent
+		if (bHitSomething)
+		{
+			auto Actor = HitResult.Actor;
+			auto BlastableComponent = Actor->FindComponentByClass<UBlastableComponent>();
+
+			// if doesn't provide skeletal mesh, nothing to do
+			// if (BlastableComponent != nullptr)
+			// 	BlastableComponent->Blast(HitResult.Location, ImpactRadius);
+		}
+	}
+
+
 }
 
 void AArmorBlastingCharacter::SwapGun(float Val)
@@ -246,6 +327,25 @@ void AArmorBlastingCharacter::SwapGun(float Val)
 	auto NextMode = Val == -1 && CurrentModeInt == 0 ? AmountModes - 1 : (CurrentModeInt + 1) % AmountModes;
 
 	CurrentShootingMode = static_cast<ShootModes>(NextMode);
+	
+	FString Gun;
+	switch (CurrentShootingMode)
+	{
+	case AArmorBlastingCharacter::ShootModes::Semiauto:
+		Gun = "Semiauto";
+		break;
+	case AArmorBlastingCharacter::ShootModes::Shotgun:
+		Gun = "Shotgun";
+		break;
+	case AArmorBlastingCharacter::ShootModes::Auto:
+		Gun = "Auto";
+		break;
+	case AArmorBlastingCharacter::ShootModes::N_SHOOT_MODES:
+	default:
+		break;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Using Gun: %s\n"), *Gun);
 }
 
 void AArmorBlastingCharacter::OnResetVR()

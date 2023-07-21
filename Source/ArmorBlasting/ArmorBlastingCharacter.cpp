@@ -14,6 +14,7 @@
 #include "DrawDebugHelpers.h"
 #include "BlastableComponent.h"
 #include "ArmorBlasting.h"
+#include "NiagaraFunctionLibrary.h"
 #include "Math/UnrealMathUtility.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 
@@ -61,7 +62,7 @@ AArmorBlastingCharacter::AArmorBlastingCharacter()
 
 	// Default offset from the character location for projectiles to spawn
 	GunOffset = FVector(100.0f, 0.0f, 10.0f);
-
+	 
 	// Note: The ProjectileClass and the skeletal mesh/anim blueprints for Mesh1P, FP_Gun, and VR_Gun 
 	// are set in the derived blueprint asset named MyCharacter to avoid direct content references in C++.
 
@@ -221,6 +222,7 @@ void AArmorBlastingCharacter::ShootSemiAuto()
 		if (BlastableComponent != nullptr)
 		{
 			BlastableComponent->Blast(HitResult.Location, 5);
+			UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactSparks, HitResult.Location, HitResult.ImpactNormal.Rotation(), 0.001 * FVector::OneVector);
 		}
 	}
 }
@@ -252,7 +254,7 @@ void AArmorBlastingCharacter::ShootShotgun()
 	// around a circle at the end of the main ray
 
 	// Config parameters
-	const float MaxSpreadRadius = 30;
+	const float MaxSpreadRadius = 50;
 	const float MaxRange = 1000;
 	const FVector CentralEndpoint = SpawnLocation + CameraForward * MaxRange;
 	const int NShots = 15;
@@ -280,12 +282,12 @@ void AArmorBlastingCharacter::ShootShotgun()
 		QueryParams.bTraceComplex = true;
 
 		// -- DEBUG ONLY -----------------------
-		if (GetWorld() != nullptr)
-		{
-			const FName TraceTag = TEXT("ShotTrace");
-			QueryParams.TraceTag = TraceTag;
-			GetWorld()->DebugDrawTraceTag = TraceTag;
-		}
+		// if (GetWorld() != nullptr)
+		// {
+		// 	const FName TraceTag = TEXT("ShotTrace");
+		// 	QueryParams.TraceTag = TraceTag;
+		// 	GetWorld()->DebugDrawTraceTag = TraceTag;
+		// }
 		// -------------------------------------
 
 		// Try to create a linetrace shot
@@ -293,7 +295,7 @@ void AArmorBlastingCharacter::ShootShotgun()
 		bool bHitSomething = GetWorld()->LineTraceSingleByChannel(
 											HitResult, 
 											SpawnLocation, 
-											SpawnLocation + MaxRange * CameraForward, 
+											Endpoint, 
 											ECC_Enemy, 
 											QueryParams
 							);
@@ -304,8 +306,13 @@ void AArmorBlastingCharacter::ShootShotgun()
 			auto BlastableComponent = Actor->FindComponentByClass<UBlastableComponent>();
 
 			// if doesn't provide skeletal mesh, nothing to do
-			// if (BlastableComponent != nullptr)
-			// 	BlastableComponent->Blast(HitResult.Location, ImpactRadius);
+			if (BlastableComponent != nullptr)
+			{
+				BlastableComponent->Blast(HitResult.Location, ImpactRadius);
+				UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactSparks, HitResult.Location, HitResult.ImpactNormal.Rotation(), 0.001 * FVector::OneVector);
+			}
+
+
 		}
 	}
 

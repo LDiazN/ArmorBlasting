@@ -44,11 +44,7 @@ void UBlastableComponent::BeginPlay()
 	TimeDamageRenderTarget->Rename(TEXT("TimeDamageRenderTarget"));
 	TimeDamageRenderTarget->ResizeTarget(1024, 1024);
 	TimeDamageRenderTarget->ClearColor = FColor::Black;
-
-	TimeDamageRenderTargetBackup = NewObject<UTextureRenderTarget2D>();
-	TimeDamageRenderTargetBackup->Rename(TEXT("TimeDamageBackupRenderTarget"));
-	TimeDamageRenderTargetBackup->ResizeTarget(1024, 1024);
-	TimeDamageRenderTargetBackup->ClearColor = FColor::Black;
+	TimeDamageRenderTarget->bNeedsTwoCopies = true; // TODO REMOVE IF DOESNT WORKS
 
 	// Set up dynamic materials
 	SetUnwrapMaterial(UnwrapMaterial);
@@ -242,27 +238,12 @@ void UBlastableComponent::SetFadingMaterial(UMaterial* Material)
 	if (IsValid(Material) && IsValid(this))
 	{
 		UnwrapFadingMaterialInstance = UMaterialInstanceDynamic::Create(Material, this, TEXT("FadingMaterialInstace"));
-		UnwrapFadingMaterialInstance->SetTextureParameterValue(FName("RT_FadingTexture"), TimeDamageRenderTargetBackup);
+		UnwrapFadingMaterialInstance->SetTextureParameterValue(FName("RT_FadingTexture"), TimeDamageRenderTarget);
 		if (UnwrapFadingMaterialInstance == nullptr)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Could not set up material instance for fading material"));
 			return;
 		}
-	}
-
-	if (IsValid(TextureSampleEmissiveMaterial) && IsValid(this))
-	{
-		TextureSampleEmissiveMaterialInstance = UMaterialInstanceDynamic::Create(
-													TextureSampleEmissiveMaterial, 
-													this, 
-													TEXT("TextureSampleEmissiveMaterialInstance"));
-		if (TextureSampleEmissiveMaterialInstance == nullptr)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Could not set up material instance for texture sample material"));
-			return;
-		}
-
-		TextureSampleEmissiveMaterialInstance->SetTextureParameterValue(FName("Texture"), TimeDamageRenderTarget);
 	}
 }
 
@@ -287,28 +268,16 @@ TArray<UStaticMeshComponent *> UBlastableComponent::GetBlastableMeshSet() const
 
 void UBlastableComponent::UpdateFadingDamageRenderTarget()
 {
-	FVector2D Size;
-	if (bBlastJustReceived)
-		bBlastJustReceived = false;
-
 	// Store what we draw 
+	FVector2D Size;
 	UCanvas* Canvas;
 	FDrawToRenderTargetContext Context;
-	UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(this, TimeDamageRenderTargetBackup, Canvas, Size, Context);
-	{
-		// No está guardando la textura vieja en la nueva, arreglar TODO
-		Canvas->K2_DrawMaterial(TextureSampleEmissiveMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
-	}
-	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, Context);
-	Canvas = nullptr;
-
 	// Begin a Draw Canvas To Render Target to render the material that fades the render target
 	UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(this, TimeDamageRenderTarget, Canvas, Size, Context);
 	{
 		Canvas->K2_DrawMaterial(UnwrapFadingMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);
 	}
 	UKismetRenderingLibrary::EndDrawCanvasToRenderTarget(this, Context);
-
 }
 
 USkeletalMeshComponent* UBlastableComponent::GetMeshComponent() const

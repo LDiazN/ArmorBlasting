@@ -7,6 +7,7 @@
 #include "ArmorBlastingCharacter.generated.h"
 
 class UInputComponent;
+class UNiagaraSystem;
 
 UCLASS(config=Game)
 class AArmorBlastingCharacter : public ACharacter
@@ -79,6 +80,14 @@ public:
 	/** Sound to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=Gameplay)
 	class USoundBase* FireSound;
+
+	/** Sound to play after the shotgun fire*/
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+	class USoundBase* ShotgunPumpSound;
+
+	/** Sparks emitted at impact location */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VFX)
+	class UNiagaraSystem* ImpactSparks;
 
 	/** AnimMontage to play each time we fire */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)

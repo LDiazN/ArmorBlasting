@@ -45,10 +45,6 @@ public:
 	UFUNCTION(BlueprintCallable)
 	UTextureRenderTarget2D* GetTimeDamageRenderTarget() const { return Cast<UTextureRenderTarget2D>(TimeDamageRenderTarget); } // TODO: Devolver esto a DamageRenderTarget
 
-	UFUNCTION(BlueprintCallable)
-	UTextureRenderTarget2D* GetTimeDamageBackupRenderTarget() const { 
-		return TimeDamageRenderTargetBackup; } // TODO: Devolver esto a DamageRenderTarget
-
 protected:
 	/// <summary>
 	/// Checks if this component is properly configured
@@ -84,13 +80,6 @@ protected:
 	/** Render target where the damage over time will be drawn */
 	UTextureRenderTarget2D* TimeDamageRenderTarget;
 
-	/** Render target where the damage over time will be stored so that it can be sampled from the material
-		without suffering from clearing the render target before actually drawing the fading material
-		that requires the previous content.
-	*/
-	UTextureRenderTarget2D* TimeDamageRenderTargetBackup;
-
-
 	/** Material used to unwrap the texture, an instance will be created in runtime */
 	UPROPERTY(EditAnywhere, Category = "Resources")
 	UMaterial* UnwrapMaterial;
@@ -106,14 +95,6 @@ protected:
 	/** Material instance used for fading damage */
 	UPROPERTY()
 	UMaterialInstanceDynamic* UnwrapFadingMaterialInstance;
-
-	/** Material to draw a texture  over a surface using just the emmisive channel */
-	UPROPERTY(EditAnywhere, Category = "Resources")
-	UMaterial* TextureSampleEmissiveMaterial;
-
-	/** Material instance used to draw fading damage to backup texture */
-	UPROPERTY()
-	UMaterialInstanceDynamic* TextureSampleEmissiveMaterialInstance;
 
 	/** How much time every damage mark takes to dissapear */
 	UPROPERTY(EditAnywhere, Category = "VFX")

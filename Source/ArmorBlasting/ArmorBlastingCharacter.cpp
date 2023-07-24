@@ -91,6 +91,13 @@ AArmorBlastingCharacter::AArmorBlastingCharacter()
 	//bUsingMotionControllers = true;
 }
 
+void AArmorBlastingCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	TimeSinceLastShot += DeltaSeconds;
+}
+
 void AArmorBlastingCharacter::BeginPlay()
 {
 	// Call the base class  
@@ -126,6 +133,7 @@ void AArmorBlastingCharacter::SetupPlayerInputComponent(class UInputComponent* P
 
 	// Bind fire event
 	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AArmorBlastingCharacter::OnFire);
+	PlayerInputComponent->BindAxis("FireHold", this, &AArmorBlastingCharacter::OnFireHold);
 	PlayerInputComponent->BindAxis("SwapWeapon", this, &AArmorBlastingCharacter::SwapGun);
 
 	// Enable touchscreen input
@@ -146,8 +154,40 @@ void AArmorBlastingCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AArmorBlastingCharacter::LookUpAtRate);
 }
 
+void AArmorBlastingCharacter::SetFireMode(ShootModes NewMode)
+{
+	CurrentShootingMode = NewMode;
+}
+
+int AArmorBlastingCharacter::GetFireRate() const
+{
+	switch (CurrentShootingMode)
+	{
+	case AArmorBlastingCharacter::ShootModes::Semiauto:
+		return SemiAutoFireRate;
+	case AArmorBlastingCharacter::ShootModes::Shotgun:
+		return ShotgunFireRate;
+	case AArmorBlastingCharacter::ShootModes::Auto:
+		return AutoFireRate;
+	case AArmorBlastingCharacter::ShootModes::N_MODES:
+	default:
+		break;
+	}
+
+	return 0;
+}
+
 void AArmorBlastingCharacter::OnFire()
 {
+		
+	// This might not be the best way to implement multiple 
+	// multiple weapon types but it will do as a demo for precodural armor damage
+
+	// Do nothing if can't shoot
+	if (!CanShoot())
+		return;
+
+	// Choose wich type of shoot to employ
 	switch (CurrentShootingMode)
 	{
 		case ShootModes::Semiauto:
@@ -156,8 +196,12 @@ void AArmorBlastingCharacter::OnFire()
 		case ShootModes::Shotgun:
 			ShootShotgun();
 			break;
+		case ShootModes::Auto:
+			ShootAuto();
+			break;
 		default:
 			UE_LOG(LogTemp, Warning, TEXT("Unsupported type of shot"));
+			return;
 			break;
 	}
 
@@ -177,13 +221,25 @@ void AArmorBlastingCharacter::OnFire()
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
 	}
+
+	TimeSinceLastShot = 0;
+}
+
+void AArmorBlastingCharacter::OnFireHold(float Val)
+{
+	// Do nothing if button is not held down
+	if (FMath::IsNearlyZero(Val))
+		return;
+
+	// Only auto fire can use button-holding input
+	if (CurrentShootingMode != ShootModes::Auto)
+		return;
+	OnFire();
 }
 
 void AArmorBlastingCharacter::ShootSemiAuto()
 {
-	// try and fire a projectile
-	if (ProjectileClass == NULL) return;
-
+	// Sanity Check
 	UWorld* const World = GetWorld();
 	if (World == NULL) return;
 
@@ -193,13 +249,14 @@ void AArmorBlastingCharacter::ShootSemiAuto()
 	const FVector SpawnLocation = GetFirstPersonCameraComponent()->GetComponentLocation();
 
 	auto CameraComponent = GetFirstPersonCameraComponent();
-	auto CameraForward = CameraComponent->GetComponentRotation().Vector();
+	auto CameraForward = CameraComponent->GetForwardVector();
 	CameraForward.Normalize();
 	FCollisionQueryParams QueryParams = FCollisionQueryParams::DefaultQueryParam;
 	QueryParams.AddIgnoredActor(this);
 	QueryParams.bTraceComplex = true;
 
 	// -- DEBUG ONLY -----------------------
+	// Use this if you want to see the trace for shots
 	// if (GetWorld() != nullptr)
 	// {
 	// 	const FName TraceTag = TEXT("ShotTrace");
@@ -227,6 +284,12 @@ void AArmorBlastingCharacter::ShootSemiAuto()
 	}
 }
 
+void AArmorBlastingCharacter::ShootAuto()
+{
+	// Fow now shoot auto is just shoot semi auto but more often
+	ShootSemiAuto();
+}
+
 void AArmorBlastingCharacter::ShootShotgun()
 {
 	// try and fire a projectile
@@ -234,8 +297,6 @@ void AArmorBlastingCharacter::ShootShotgun()
 
 	UWorld* const World = GetWorld();
 	if (World == NULL) return;
-
-	UE_LOG(LogTemp, Warning, TEXT("Pum, chchk!"));
 
 	const FRotator SpawnRotation = GetControlRotation();
 	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
@@ -319,21 +380,31 @@ void AArmorBlastingCharacter::ShootShotgun()
 
 }
 
+bool AArmorBlastingCharacter::CanShoot() const
+{
+	// Check whether we can shot depending on our current shooting style
+	int FireRate = GetFireRate();
+	float TimeToWait = 1 / static_cast<float>(FireRate);
+
+	// Don't shoot if cooldown not already set
+	return TimeSinceLastShot > TimeToWait;
+}
+
 void AArmorBlastingCharacter::SwapGun(float Val)
 {
 	// If no input, do nothing
 	if (FMath::IsNearlyZero(Val))
 		return;
 
-	auto AmountModes = static_cast<int>(ShootModes::N_SHOOT_MODES);
+	auto AmountModes = static_cast<int>(ShootModes::N_MODES);
 	auto CurrentModeInt = static_cast<int>(CurrentShootingMode);
-	auto direction = Val > 0 ? 1 : -1;
+	auto Direction = Val > 0 ? 1 : -1;
 
 	// Note that mode applies the same for negative numbers, so if we go down from 0, we need to go back to 
 	// the highest value
-	auto NextMode = Val == -1 && CurrentModeInt == 0 ? AmountModes - 1 : (CurrentModeInt + 1) % AmountModes;
+	auto NextMode = Direction == -1 && CurrentModeInt == 0 ? AmountModes - 1 : (CurrentModeInt + Direction) % AmountModes;
 
-	CurrentShootingMode = static_cast<ShootModes>(NextMode);
+	SetFireMode(static_cast<ShootModes>(NextMode));
 	
 	FString Gun;
 	switch (CurrentShootingMode)
@@ -347,7 +418,7 @@ void AArmorBlastingCharacter::SwapGun(float Val)
 	case AArmorBlastingCharacter::ShootModes::Auto:
 		Gun = "Auto";
 		break;
-	case AArmorBlastingCharacter::ShootModes::N_SHOOT_MODES:
+	case AArmorBlastingCharacter::ShootModes::N_MODES:
 	default:
 		break;
 	}

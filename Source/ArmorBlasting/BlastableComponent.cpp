@@ -84,7 +84,6 @@ void UBlastableComponent::BeginPlay()
 			if (Cast<UMaterialInstanceDynamic>(Material) != nullptr)
 				continue;
 
-			UE_LOG(LogTemp, Warning, TEXT("Creating dynamic material instances for blastable mesh"));
 			auto DynamicMaterial = UMaterialInstanceDynamic::Create(Material, this);
 
 			// Set the texture where this material instance will sample for damage

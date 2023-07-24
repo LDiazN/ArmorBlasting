@@ -47,19 +47,27 @@ class AArmorBlastingCharacter : public ACharacter
 	class UMotionControllerComponent* L_MotionController;
 
 public:
+	enum class ShootModes {
+		Semiauto,
+		Shotgun,
+		Auto,
+		N_MODES
+	};
+
 	AArmorBlastingCharacter();
+	
+	virtual void Tick(float DeltaSeconds) override;
+
+	/// <summary>
+	/// Get currently active shooting mode
+	/// </summary>
+	/// <returns> Currently active shooting mode </returns>
+	ShootModes GetShootMode() const { return CurrentShootingMode; }
 
 protected:
 	virtual void BeginPlay();
 
 public:
-
-	enum class ShootModes {
-		Semiauto,
-		Shotgun,
-		Auto,
-		N_SHOOT_MODES
-	};
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
@@ -97,18 +105,66 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	uint32 bUsingMotionControllers : 1;
 
-	ShootModes CurrentShootingMode = ShootModes::Semiauto;
+	/** Semi Auto fire rate: How many shots per second to shoot on semi auto mode. */
+	UPROPERTY(EditAnywhere, Category = Combat)
+	int SemiAutoFireRate = 4;
+
+	/** Auto Fire Rate: How many shots per second to shoot on auto mode. */
+	UPROPERTY(EditAnywhere, Category = Combat)
+	int AutoFireRate = 10;
+
+	/** Shotgun Fire Rate: How many shots per second to shoot on shotgun mode. */
+	UPROPERTY(EditAnywhere, Category = Combat)
+	int ShotgunFireRate = 2;
+
 
 protected:
 	
-	/** Fires a projectile. */
+	/// <summary>
+	/// Change the firing mode properly including all required state management
+	/// </summary>
+	/// <param name="NewMode"> New mode to set up </param>
+	void SetFireMode(ShootModes NewMode);
+
+	/// <summary>
+	/// How many bullets per second to shoot according to the current shooting mode.
+	/// </summary>
+	/// <returns> Current fire rate </returns>
+	int GetFireRate() const;
+
+	/// <summary>
+	/// Fires a projectile.
+	/// </summary>
 	void OnFire();
 
-	/** Shoot a single shot */
+	/// <summary>
+	/// Try to fire full if in full auto mode. This is bound to an axis intead of an input bc
+	/// unreal seems unable to handle repeat events for mouse input. See: 
+	/// https://forums.unrealengine.com/t/how-to-use-ie-repeat-einputevent-for-mouse-buttons/287312
+	/// </summary>
+	/// <param name="Val">Value of axis. </param>
+	void OnFireHold(float Val);
+
+	/// <summary>
+	/// Shoot a single shot
+	/// </summary>
 	void ShootSemiAuto();
 
-	/** Shoot a shotgun */
+	/// <summary>
+	/// Shoot a single sho
+	/// </summary>
+	void ShootAuto();
+	
+	/// <summary>
+	/// Shoot a shotgun
+	/// </summary>
 	void ShootShotgun();
+
+	/// <summary>
+	/// Checks if you can shoot something. 
+	/// </summary>
+	/// <returns></returns>
+	bool CanShoot() const;
 
 	/// <summary>
 	/// Swap weapon in the direction specified by `Val`
@@ -149,6 +205,14 @@ protected:
 	void EndTouch(const ETouchIndex::Type FingerIndex, const FVector Location);
 	void TouchUpdate(const ETouchIndex::Type FingerIndex, const FVector Location);
 	TouchData	TouchItem;
+
+protected:
+
+	/** Current Shooting Mode */
+	ShootModes CurrentShootingMode = ShootModes::Semiauto;
+
+	/** Used to know whether we can shoot or not according to our frame rate */
+	float TimeSinceLastShot = 0;
 	
 protected:
 	// APawn interface

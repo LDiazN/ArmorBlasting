@@ -29,8 +29,6 @@ UBlastableComponent::UBlastableComponent()
 void UBlastableComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	UE_LOG(LogTemp, Warning, TEXT("CALLING BEGIN PLAY FROM %s"), *(GetOwner()->GetName()));
-
 
 	// Set up render targets:
 	DamageRenderTarget = NewObject<UTextureRenderTarget2D>();
@@ -38,27 +36,27 @@ void UBlastableComponent::BeginPlay()
 	DamageRenderTarget->ResizeTarget(1024, 1024);
 	DamageRenderTarget->ClearColor = FColor::Black;
 
-	// Set up TimeDamageRenderTarget. Since we're using it to fade the damage using canvas, then we create it as 
-	// a CanvasRenderTarget
 	TimeDamageRenderTarget = NewObject<UTextureRenderTarget2D>();
 	TimeDamageRenderTarget->Rename(TEXT("TimeDamageRenderTarget"));
 	TimeDamageRenderTarget->ResizeTarget(1024, 1024);
 	TimeDamageRenderTarget->ClearColor = FColor::Black;
-	TimeDamageRenderTarget->bNeedsTwoCopies = true; // TODO REMOVE IF DOESNT WORKS
+	TimeDamageRenderTarget->bNeedsTwoCopies = true; 
+	// ^ Note that bNeedsTwoCopies is necessary to prevent the DrawMaterial call
+	// from clearing the render target used to fade over time before actually fading it. 
+	// (making it black before sampling the texture and writing back to it)
+
 
 	// Set up dynamic materials
 	SetUnwrapMaterial(UnwrapMaterial);
 	SetFadingMaterial(FadingMaterial);
 
+	// Sanity checks
 	CheckComponentConsistency();
-	// Find Component tagged with "BlastableMesh"
-	auto const Owner = GetOwner();
 
-	// Set up Blastable mesh
+	// Set up Blastable meshes 
+	auto const Owner = GetOwner();
 	if (Owner != nullptr)
-	{
 		BlastableMeshes = GetBlastableMeshSet();
-	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Could not set up blastable mesh"));
@@ -70,9 +68,13 @@ void UBlastableComponent::BeginPlay()
 		if (Mesh == nullptr)
 			continue;
 
+		// Note that blastable meshes are intended to use complex collisions, and for that reason
+		// we only block traces in ECC_Enemy, to prevent the physics engine from computing physics 
+		// using complex geometry.
 		Mesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 		Mesh->SetCollisionResponseToChannel(ECC_Enemy, ECollisionResponse::ECR_Block);
 
+		// Create dynamic material instances and set up parameter values.
 		auto const Materials = Mesh->GetMaterials();
 		for (size_t i = 0; i < Materials.Num(); i++)
 		{
@@ -94,12 +96,11 @@ void UBlastableComponent::BeginPlay()
 		}
 	}
 
-	// Start timer to update fading
+	// Start timer to update fading. Note that we only update material fading 10 times a second 
+	// to prevent blowing the gpu with too many calls. 
 	auto World = GetWorld();
 	if (World)
-	{
 		World->GetTimerManager().SetTimer(DamageFadingTimerHandle, this, &UBlastableComponent::UpdateFadingDamageRenderTarget, 0.10, true, 0);
-	}
 }
 
 
@@ -113,6 +114,8 @@ void UBlastableComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 
 void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius)
 {
+	// Sanity checks: Check for validity of required resources 
+	// (blastable meshes, unwrap material)
 	if (BlastableMeshes.Num() == 0)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Error trying to unwrap to render target: Blastable Mesh not properly configured"));
@@ -125,28 +128,38 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 		return;
 	}
 
+	// Prevent mesh to show up in unwrapped texture during scene capture
 	auto const Mesh = GetMeshComponent();
 	if (Mesh != nullptr)
 		Mesh->SetVisibility(false);
 
 	// Store old material to restore it afterwards
 	TArray<TArray<UMaterialInterface*>> OldMaterialsPerMesh;
+
+	// Make sure that the scene capture is in the right position. Note that it might not be 
+	// properly placed when the actor is moving. We use global transformations to prevent 
+	// local transforms from messing the placing of the scene capture's camera. Also store
+	// previous rotation to restore it when we finish.
 	FRotator OldRotation = SceneCapture->GetComponentRotation();
 	FVector OldPosition = SceneCapture->GetComponentLocation();
-
 	SceneCapture->SetWorldRotation(FRotator(-90, -90, 0));
 	SceneCapture->SetWorldLocation(GetOwner()->GetActorLocation() + FVector{0,0,512});
 
+	// Unwrap all blastable meshes:
 	for (auto const MeshComponent : BlastableMeshes)
 	{
 		// Sanity check
 		if (MeshComponent == nullptr)
 			continue;
 
-		// Original materials
+		// Original materials: Store it to restore it later
 		auto const& Materials = MeshComponent->GetMaterials();
 		TArray<UMaterialInterface*> OldMaterials(Materials);
 		OldMaterialsPerMesh.Add(OldMaterials);
+
+		// Update material in all armor pieces to unwrap material. Note that
+		// UVs for each piece should be aware of other pieces UVs so that 
+		// they don't overlap
 		for (size_t i = 0; i < Materials.Num(); i++)
 		{
 			MeshComponent->SetMaterial(i, UnwrapMaterialInstance);
@@ -157,24 +170,26 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 		}
 	}
 
-		// Capture Scene with just the unwrapped material and hit locations
-
-		// Capture scene in the right render target
-		SceneCapture->TextureTarget = DamageRenderTarget;
-		SceneCapture->CaptureScene();
+	// Capture Scene with just the unwrapped material and hit locations
 	
-		// Now repeat for the secondary render target
-		SceneCapture->TextureTarget = TimeDamageRenderTarget;
-		SceneCapture->CaptureScene();
+	// Capture scene in the damage render target
+	SceneCapture->TextureTarget = DamageRenderTarget;
+	SceneCapture->CaptureScene();
+	
+	// Now repeat for the secondary render target, the image in this target will fade over time
+	SceneCapture->TextureTarget = TimeDamageRenderTarget;
+	SceneCapture->CaptureScene();
 
-		// Restore old materials
-		for (int i = 0; i < BlastableMeshes.Num(); i++)
-			for (int j = 0; j < OldMaterialsPerMesh[i].Num(); j++)
-				BlastableMeshes[i]->SetMaterial(j, OldMaterialsPerMesh[i][j]);
+	// Restore old materials
+	for (int i = 0; i < BlastableMeshes.Num(); i++)
+		for (int j = 0; j < OldMaterialsPerMesh[i].Num(); j++)
+			BlastableMeshes[i]->SetMaterial(j, OldMaterialsPerMesh[i][j]);
 
+	// Restore main mesh visibility
 	if (Mesh != nullptr)
 		Mesh->SetVisibility(true);
 
+	// Restore scene capture visibility to leave everything as we found it. 
 	SceneCapture->SetWorldRotation(OldRotation);
 	SceneCapture->SetWorldLocation(OldPosition);
 }
@@ -182,7 +197,6 @@ void UBlastableComponent::UnwrapToRenderTarget(FVector HitLocation, float Radius
 void UBlastableComponent::Blast(FVector Location, float ImpactRadius)
 {
 	UnwrapToRenderTarget(Location, ImpactRadius);
-	bBlastJustReceived = true;
 }
 
 void UBlastableComponent::CheckComponentConsistency() const
@@ -272,7 +286,9 @@ void UBlastableComponent::UpdateFadingDamageRenderTarget()
 	FVector2D Size;
 	UCanvas* Canvas;
 	FDrawToRenderTargetContext Context;
-	// Begin a Draw Canvas To Render Target to render the material that fades the render target
+
+	// Begin a Draw Canvas To Render Target to render the material that fades the render target. 
+	// This material should just sample from the TimeDamageRenderTarget and write back the same color but dimmer. 
 	UKismetRenderingLibrary::BeginDrawCanvasToRenderTarget(this, TimeDamageRenderTarget, Canvas, Size, Context);
 	{
 		Canvas->K2_DrawMaterial(UnwrapFadingMaterialInstance, FVector2D::ZeroVector, Size, FVector2D::ZeroVector);

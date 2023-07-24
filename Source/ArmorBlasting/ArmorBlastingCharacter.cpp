@@ -191,7 +191,7 @@ void AArmorBlastingCharacter::ShootSemiAuto()
 	// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
 	// const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
 	const FVector SpawnLocation = GetFirstPersonCameraComponent()->GetComponentLocation();
-	// TODO finish Shoot code
+
 	auto CameraComponent = GetFirstPersonCameraComponent();
 	auto CameraForward = CameraComponent->GetComponentRotation().Vector();
 	CameraForward.Normalize();

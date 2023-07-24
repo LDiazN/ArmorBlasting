@@ -30,6 +30,10 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	/**  
+	* @param HitLocation Where the object was hit in world space
+	* @param Radius Size of area of efect around `HitLocation`
+	*/
 	UFUNCTION(BlueprintCallable, Category = "ArmorBlasting")
 	void UnwrapToRenderTarget(FVector HitLocation = FVector::ZeroVector, float Radius = 0);
 
@@ -39,9 +43,11 @@ public:
 	/// <param name="Location">Location in world space where this object was hit</param>
 	void Blast(FVector Location, float ImpactRadius);
 
+	/** Get render target used to store damage for this blastable */
 	UFUNCTION(BlueprintCallable)
 	UTextureRenderTarget2D* GetDamageRenderTarget() const { return DamageRenderTarget; } // TODO: Devolver esto a DamageRenderTarget
 
+	/** Get Render target used to store temporal damage for this blastable */
 	UFUNCTION(BlueprintCallable)
 	UTextureRenderTarget2D* GetTimeDamageRenderTarget() const { return Cast<UTextureRenderTarget2D>(TimeDamageRenderTarget); } // TODO: Devolver esto a DamageRenderTarget
 
@@ -53,14 +59,30 @@ protected:
 
 protected:
 
+	/// <summary>
+	/// This function will keep all Scene Capture default settings in one place.
+	/// </summary>
 	void SetUpSceneRender2D();
 
+	/// <summary>
+	/// Set up material parameters and create dynamic material instances for the unwrapping material
+	/// </summary>
+	/// <param name="Material">Base material for unwrapping</param>
 	void SetUnwrapMaterial(UMaterial* Material);
 
+	/// <summary>
+	/// Set up material parameters and create dynamic material instances for the fading damage material
+	/// </summary>
+	/// <param name="Material"> Base material for color fading over time </param>
 	void SetFadingMaterial(UMaterial* Material);
 
+	/// <summary>
+	/// Helper function to collect meshes that are intended to be blastable.
+	/// </summary>
+	/// <returns>An array of meshes child of the current owner that are tagged with 'BlastableMesh' </returns>
 	TArray<UStaticMeshComponent*> GetBlastableMeshSet() const;
 
+	/** Update fading damage every few ms to implement the slow fading effect */
 	UFUNCTION()
 	void UpdateFadingDamageRenderTarget();
 
@@ -100,6 +122,9 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "VFX")
 	float TimeToVanishDamage = 2.f;
 
+	/** Meshes marked as Blastable. These are obtained using the GetBlastableMeshSet, 
+		and cached to prevent overhead of multiple object searches
+	*/
 	UPROPERTY(EditDefaultsOnly, Category = "Component")
 	TArray<UStaticMeshComponent*> BlastableMeshes;
 
@@ -107,7 +132,4 @@ protected:
 	/// Used to repeat fading damage material 
 	/// </summary>
 	FTimerHandle DamageFadingTimerHandle;
-
-	bool bBlastJustReceived = false;
-
 };

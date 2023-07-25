@@ -64,6 +64,9 @@ public:
 	/// <returns> Currently active shooting mode </returns>
 	ShootModes GetShootMode() const { return CurrentShootingMode; }
 
+	UFUNCTION(BlueprintPure)
+	FString GetCurrentGunName() const;
+
 protected:
 	virtual void BeginPlay();
 
@@ -214,6 +217,10 @@ protected:
 	/** Used to know whether we can shoot or not according to our frame rate */
 	float TimeSinceLastShot = 0;
 	
+	UPROPERTY(EditAnywhere, Category = UI)
+	TSubclassOf<UUserWidget> GunWidgetClass;
+	UUserWidget* GunWidget;
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;

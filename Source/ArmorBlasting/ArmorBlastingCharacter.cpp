@@ -16,6 +16,7 @@
 #include "ArmorBlasting.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Math/UnrealMathUtility.h"
+#include "Blueprint/UserWidget.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 
 
@@ -98,6 +99,26 @@ void AArmorBlastingCharacter::Tick(float DeltaSeconds)
 	TimeSinceLastShot += DeltaSeconds;
 }
 
+FString AArmorBlastingCharacter::GetCurrentGunName() const
+{
+	switch (CurrentShootingMode)
+	{
+	case AArmorBlastingCharacter::ShootModes::Semiauto:
+		return "Semiauto";
+		break;
+	case AArmorBlastingCharacter::ShootModes::Shotgun:
+		return "Shotgun";
+		break;
+	case AArmorBlastingCharacter::ShootModes::Auto:
+		return "Auto";
+	case AArmorBlastingCharacter::ShootModes::N_MODES:
+	default:
+		break;
+	}
+
+	return "UNKNOWN WEAPON";
+}
+
 void AArmorBlastingCharacter::BeginPlay()
 {
 	// Call the base class  
@@ -117,6 +138,18 @@ void AArmorBlastingCharacter::BeginPlay()
 		VR_Gun->SetHiddenInGame(true, true);
 		Mesh1P->SetHiddenInGame(false, true);
 	}
+
+	// Set up GUI to display currently active gun
+	if (IsValid(GunWidgetClass))
+	{
+		GunWidget = CreateWidget(GetWorld(), GunWidgetClass, TEXT("Gun Name Display"));
+
+		if (GunWidget == nullptr)
+			return;
+
+		GunWidget->AddToViewport();
+	}
+
 }
 
 //////////////////////////////////////////////////////////////////////////

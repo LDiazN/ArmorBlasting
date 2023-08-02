@@ -42,7 +42,7 @@ This is the same as the marksman shot, but you can hold the shoot many shots per
 </p>
 
 ## Damage Maps
-The blastable component stores damage over the mesh surface using two maps (implemented with render targets): a **Damage Map** and a **Temporal Damage Map**. These maps are then fed to the armor material as texture parameters, so that they can be sampled from the armor shader and implement any effect you like. In my case, I wanted to see through the armor while making the shot border glow to represent melted metal. The Damage Map is used for the first effect, while the Temporal Damage Map is used for the second.  
+The blastable component stores damage over the mesh surface using two maps (implemented with render targets): a **Damage Map** and a **Temporal Damage Map**. These maps are then fed to the armor material as texture parameters, so that they can be sampled from the armor shader and implement any effect you like. In my case, I wanted to poke holes in the armor with shots while making the hole border glow to represent melted metal. The Damage Map is used for the first effect, while the Temporal Damage Map is used for the second.  
 
 ### Permanent Damage
 

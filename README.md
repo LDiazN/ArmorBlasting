@@ -36,8 +36,13 @@ The shooting mode is a line trace that starts at the weapon muzzle and goes in t
 </p>
 
 ## Full Auto Rifle
+This is the same as the marksman shot, but you can hold the shoot many shots per second:
+<p align="center">
+   <img src="https://github.com/LDiazN/ArmorBlasting/assets/41093870/d3c4b61b-d69a-408f-803c-4783c00c450f" alt="Full Auto Preview"/>
+</p>
 
 ## Damage Maps
+The blastable component stores damage over the mesh surface using two maps (implemented with render targets): a **Damage Map** and a **Temporal Damage Map**. These maps are then fed to the armor material as texture parameters, so that they can be sampled from the armor shader and implement any effect you like. In my case, I wanted to see through the armor while making the shot border glow to represent melted metal. The Damage Map is used for the first effect, while the Temporal Damage Map is used for the second.  
 
 ### Permanent Damage
 

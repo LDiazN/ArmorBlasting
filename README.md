@@ -74,25 +74,23 @@ In the following sections I explain this process more carefully.
 
 ## Mesh Unwrapping 
 
-A more comprehensive guide on mesh unwrapping and painting can be found in this amazing tutorial from [kodeco](https://www.kodeco.com/6817-dynamic-mesh-painting-in-unreal-engine-4), but the general outline goes like this:
+The general idea is that we want to create a damage map for our model surface that we can sample using texture coordinates. A more comprehensive guide on mesh unwrapping and painting can be found in this amazing tutorial from [kodeco](https://www.kodeco.com/6817-dynamic-mesh-painting-in-unreal-engine-4). However, the general outline of the process is as follows:
 
-We want to create a damage map for our model surface that we can sample using texture coordinates. To do this, we:
+1. Create a material with two parameters: the position and radius of the damage sphere.
+2. Mark a pixel as white if it is inside the damage sphere, and black otherwise.
+3. Move the pixel to a horizontal plane in its corresponding position according to its texture coordinates using the world position offset output pin. This can be done by subtracting the pixel's position from its Absolute World Position and adding its texture coordinates.
+4. Take a scene capture using a *Scene Capture Component*.
 
-1. Create a material with two parameters: the position and radius we mentioned before.
-2. Mark a fragment as white if inside the damage sphere (using the AbsoluteWorldPosition node), and black otherwise.
-3. Move this fragment to a horizontal plane in its corresponding position according its texture coordinates. You do this by substracting the fragment's position its *Absolute World Position* and adding its texture coordinates.
-4. Take a Scene Capture using a *Scene Capture Component*
+Note that one of the hardest parts of this process is getting the scene capture set up correctly. This requires careful configuration, as you may end up capturing the robot that should not be visible, or capturing the sky map. For this reason, I tried to set up all relevant configurations from the C++ class so that it's properly configured when used in a blueprint. The configuration for the scene capture component can be found in [this function](https://github.com/LDiazN/ArmorBlasting/blob/43e2e5c155df63f687b75b28f3e6f65034493a35/Source/ArmorBlasting/BlastableComponent.cpp#L217).
 
-Note that one of the hardest parts is actually getting the scene capture right since it requires some carefully set up before capturing. You might end capturing the robot that should not show up, you can get a mad capture when the actor is rotated, or capture the Sky Map. For this reason I tried to set up all relevant configurations from the C++ class so that the resulting blueprint has its settings properly set by default. You can find the configuration 
-for the scene capture component in [this function](https://github.com/LDiazN/ArmorBlasting/blob/43e2e5c155df63f687b75b28f3e6f65034493a35/Source/ArmorBlasting/BlastableComponent.cpp#L217). 
+Another important factor to consider is that the mesh must meet certain requirements in order to be unwrapped using this approach. These requirements include:
 
-Another important thing is that the mesh has some requirements to be unwrapable with this approach, since we have some non-mentioned asumptions: 
+* **Unique texture coordinates**: The mesh must have a different texture coordinate at every point. Otherwise, when the damage is being sampled, some points may show up damaged when nothing happened to them, which is confusing.
+* **Precise physics**: The physics asset for the mesh should approximate the mesh as much as possible. This is because a ray can hit the physics asset further from the mesh, and trigger a hit but with no damage being recorded in the damage map since it was too far from the actual mesh surface. For this reason, I used a low-poly mesh for the armor, so that I can use complex collisions with reduced computational cost.
+* **UV matching for each mesh**: Note that each armor part is its own independent mesh. However, in order to get a consistent unwrapping and damage mapping, each part must be aware of the other parts. This is so that they have a subset of UV coordinates that does not collide with other parts.
 
-1. **Unique texture coordinates**: The mesh should have a different texture coordinates at every point, or otherwise when the damage is being sampled some might show up damaged when nothing happened to them, which is confusing.
-2. **Precise Physics**: The physics asset for the mesh should approximate the mesh as much as possible since a ray can hit the physics asset further from the mesh, and triggering a hit but with no damage being recorded in the damage map since it was too far from the actual mesh surface. For this reason I used a **low poly mesh** for the armor, so that I can use complex collisions with reduced overhead.
-3. **UV Matching for each mesh**: Note that each armor part is its own independent mesh. But in order to get a consistent unwrapping and damage mapping each part should be aware of the other parts, so that they have a subset of UV coordinates that does not collide with other parts.
+This is how the UVs look like in Blender for the robot armor. Every part shares the same UV map and texture so that there is no overlapping on unwrapping.
 
-This is how the UVs look like in blender for the robot armor. Every part shares the same UV map and texture so that there's no overlapping on unwrapping.
 
 <p align="center">
    <img src="https://github.com/LDiazN/ArmorBlasting/assets/41093870/33aa7a2a-5e7d-4e4a-a296-599859144818" alt="UV Editing in Blender"/>

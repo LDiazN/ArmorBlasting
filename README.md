@@ -91,13 +91,15 @@ Another important factor to consider is that the mesh must meet certain requirem
 
 This is how the UVs look like in Blender for the robot armor. Every part shares the same UV map and texture so that there is no overlapping on unwrapping.
 
-
 <p align="center">
    <img src="https://github.com/LDiazN/ArmorBlasting/assets/41093870/33aa7a2a-5e7d-4e4a-a296-599859144818" alt="UV Editing in Blender"/>
 </p>
 
-
 ## Fading mesh update
+
+The `TimeDamageRenderTarget` is a temporal damage map, so its content will change over time. This change must be implemented as a continous update function in some way. For this reason I start a timer on `BeginPlay` in the `BlastableComponent` that will update the render target every 10 ms, at a rate of ~10fps. It's important to not raise the update ratio too high to prevent blowing up the GPU with draw calls. 
+
+
 
 ## Armor Material
 

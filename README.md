@@ -10,7 +10,7 @@ The project starts from the standard Unreal Engine First Person Shooter starter 
 ## Click to watch full demo in YouTube ⏯️
 
 <p align="center">
-<a href="https://www.youtube.com/watch?v=gGf-r-gn8gM" target="_blank" align="center">
+<a href="https://www.youtube.com/watch?v=FS4jb0s5NAk" target="_blank" align="center">
  <img src="https://i.ytimg.com/vi/FS4jb0s5NAk/0.jpg" alt="Watch the gameplay video in YouTube" border="10" />
 </a>
 </p>

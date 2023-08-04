@@ -88,7 +88,7 @@ Another important factor to consider is that the mesh must meet certain requirem
 * **Unique texture coordinates**: The mesh must have a different texture coordinate at every point. Otherwise, when the damage is being sampled, some points may show up damaged when nothing happened to them, which is confusing.
 * **Precise physics**: The physics asset for the mesh should approximate the mesh as much as possible. This is because a ray can hit the physics asset further from the mesh, and trigger a hit but with no damage being recorded in the damage map since it was too far from the actual mesh surface. For this reason, I used a low-poly mesh for the armor, so that I can use complex collisions with reduced computational cost.
 * **UV matching for each mesh**: Note that each armor part is its own independent mesh. However, in order to get a consistent unwrapping and damage mapping, each part must be aware of the other parts. This is so that they have a subset of UV coordinates that does not collide with other parts.
-
+ 
 This is how the UVs look like in Blender for the robot armor. Every part shares the same UV map and texture so that there is no overlapping on unwrapping.
 
 <p align="center">
@@ -96,13 +96,16 @@ This is how the UVs look like in Blender for the robot armor. Every part shares 
 </p>
 
 ## Fading mesh update
+The `TimeDamageRenderTarget` is a temporal damage map, so its content must be updated continuously over time. This update must be implemented as a function that is called repeatedly. For this reason, I start a timer on `BeginPlay` in the `BlastableComponent` that will update the render target every 10 milliseconds, at a rate of ~10 frames per second. It is important to not raise the update ratio too high, as this can cause the GPU to be overloaded with graphics calls.
 
-The `TimeDamageRenderTarget` is a temporal damage map, so its content will change over time. This change must be implemented as a continous update function in some way. For this reason I start a timer on `BeginPlay` in the `BlastableComponent` that will update the render target every 10 ms, at a rate of ~10fps. It's important to not raise the update ratio too high to prevent blowing up the GPU with draw calls. 
+In each draw call, I use the `UCanvas::K2_DrawMaterial` function to draw a simple material that just samples a texture. The output color of the material is the same texture color, but dimmed. The material output color is then drawn again in the same texture that was previously sampled. This way, the material will fade the texture color over time, which is what we want.
 
-
+Note that for this to work properly, the texture render target that we are sampling and writing back must be configured with `RenderTarget->bNeedsTwoCopies = true`. Otherwise, the texture will be cleared before the material is computed, and then the texture sample will always return black.
 
 ## Armor Material
 
 # Known issues
 
 # Further improvements
+
+* Optimize update of temporal damage maps so that draw calls are only issued if some shot hit the character in the last N seconds to prevent useless draw calls

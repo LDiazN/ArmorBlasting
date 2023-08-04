@@ -104,6 +104,20 @@ Note that for this to work properly, the texture render target that we are sampl
 
 ## Armor Material
 
+The armor material uses the information provided by the damage maps to display damage in the surface. In my case, I wanted to poke holes in the armor, so our first intuition is to bind 
+the damage to the alpha transparency. So, we start with a standard texture sampling shader. However, in order to use transparency we have to set the **blend mode** for this material to **masked**, this will unlock the _opacity mask_ output pin in our material, and we can sample the damage maps with texture coordinates to get the transparency in this point. 
+
+Then I encountered a problem: the inside of the mesh would be transparent due to backface culling. To solve this, I made the material two-sided. This means that the material will be rendered even if the backface of the mesh is facing the camera. You can use the _TwoSidedSign_ node to know in which side you are at any moment, and I use it to render the inside of the armor black. 
+
+I also wanted to create a glowing ring around the hole, so I used three different channels in the damage map. The red channel stores the sphere with the default radius, the green channel stores a sphere that is 10% larger, and the blue channel stores a sphere that is 20% larger. I use the blue channel to implement the glow, since it will contain the hole entirely. This is also why you see a blue radius around damage zones in the damage maps.
+
+To summarize, the most important configuration settings for this material are:
+
+* **Blending mode**: The blending mode must be set to masked in order to implement holes.
+* **Two-sided**: The material must be two-sided in order to render the inside of the mesh.
+* **Different channels**: Different channels can be used to store different sizes of holes, which allows you to create a glowing ring around the hole.
+
+
 # Known issues
 
 # Further improvements

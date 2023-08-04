@@ -38,7 +38,7 @@ The shooting mode is a line trace that starts at the weapon muzzle and goes in t
 </p>
 
 ## Full Auto Rifle
-This is the same as the marksman shot, but you can hold the shoot many shots per second:
+This is the same as the marksman shot, but you can hold the shoot button to fire many shots per second.
 <p align="center">
    <img src="https://github.com/LDiazN/ArmorBlasting/assets/41093870/d3c4b61b-d69a-408f-803c-4783c00c450f" alt="Full Auto Preview"/>
 </p>

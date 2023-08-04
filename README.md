@@ -120,10 +120,21 @@ To summarize, the most important configuration settings for this material are:
 
 # Known issues
 
-The current implementation have some problems that can be improved in further iterations, which I list below:
+The current implementation has some problems that can be improved in further iterations. These problems are as follows:
 
-* **Visual artifacts in the armor body** : You might have already noticed that holes in the armor body have some pixelated borders, while holes in the helmet or arms are perfectly round. This is due to the way that blender generated the automatic mesh unwrapping. The armor texture is fairly low resolution (1024x1024) and the body part has a very small region of the texture compared to the size of its 3D object. For this reason few pixels are assigned to the armor body, generating aliasing problems. This can be solved by manually setting the texture coordinates so that bigger parts of the object are assigned bigger regions of the texture. 
+* **Visual aliasing in the armor body**: You might have already noticed that holes in the armor body have some pixelated borders, while holes in the helmet or arms are perfectly round. This is due to the way that Blender generated the automatic UV unwrapping. The armor texture is fairly low resolution (1024x1024) and the body part has a very small region of the texture compared to the size of its 3D object. For this reason, few pixels are assigned to the armor body, causing aliasing problems. This can be solved by manually setting the texture coordinates so that bigger parts of the object are assigned bigger regions of the texture.
+
+<p align="center">
+   <img src="https://github.com/LDiazN/ArmorBlasting/assets/41093870/02958438-e258-4c3e-9a3e-c5d359cd02fa" alt="Example of regions assigned to armor body in the entire texture" width="50%"/>
+</p>
+
+* **Temporal Damage Updating too much** : The temporal damage map requires multiple updates per second, which can be expensive if there are too many enemies in the scene. We can reduce this cost by changing our update function to only update the render target when there has been a new hit in the past few seconds. This would be helpful because the player will usually only be focusing on a few enemies at a time.
 
 # Further improvements
 
-* Optimize update of temporal damage maps so that draw calls are only issued if some shot hit the character in the last N seconds to prevent useless draw calls
+There are a few improvements that we can make to the final result, which would make it even better. These improvements include:
+
+* **Dynamic knockback**: This would give a lot of impact to our weapons by pushing back some parts of the robot depending on the bullets' impact position and direction. This would add more impact and destruction power to the player's weapon.
+* **Better holes**: The current damage material implementation causes some regions of the armor to become floating islands of armor when there are too many holes. This is immersion breaking. We can improve this by changing the holes rendering to be more rough rather than a perfect hole. A more sophisticated solution would be to chop the disconnected parts altogether.
+* **Armor blasting**: When an enough amount of damage has been made to a piece of armor, we could blast it entirely, completely exposing the internal robot structure. This could lead to cool gameplay mechanics.
+

@@ -95,6 +95,11 @@ This is how the UVs look like in Blender for the robot armor. Every part shares 
    <img src="https://github.com/LDiazN/ArmorBlasting/assets/41093870/33aa7a2a-5e7d-4e4a-a296-599859144818" alt="UV Editing in Blender"/>
 </p>
 
+And this is the resulting mesh unwrapping material I came up with:
+![Mesh unwrapping material node editor in Unreal 4](https://github.com/LDiazN/ArmorBlasting/assets/41093870/36295782-784f-4736-83ce-09096a99d5d6)
+
+The first part selects the pixel color based on the distance of the pixel to the sphere. The second part displaces the fragment position so that it is laid out in a plane with the same shape as the UV map.
+
 ## Fading mesh update
 The `TimeDamageRenderTarget` is a temporal damage map, so its content must be updated continuously over time. This update must be implemented as a function that is called repeatedly. For this reason, I start a timer on `BeginPlay` in the `BlastableComponent` that will update the render target every 10 milliseconds, at a rate of ~10 frames per second. It is important to not raise the update ratio too high, as this can cause the GPU to be overloaded with graphics calls.
 
@@ -117,12 +122,15 @@ To summarize, the most important configuration settings for this material are:
 * **Two-sided**: The material must be two-sided in order to render the inside of the mesh.
 * **Different channels**: Different channels can be used to store different sizes of holes, which allows you to create a glowing ring around the hole.
 
+This is the resulting armor material graph:
+![Armor material showing the color selecting, computing of melted metal color, and selection of opacity value](https://github.com/LDiazN/ArmorBlasting/assets/41093870/22782cd7-7fc6-473c-8a34-d5b641957052)
+
 
 # Known issues
 
 The current implementation has some problems that can be improved in further iterations. These problems are as follows:
 
-* **Visual aliasing in the armor body**: You might have already noticed that holes in the armor body have some pixelated borders, while holes in the helmet or arms are perfectly round. This is due to the way that Blender generated the automatic UV unwrapping. The armor texture is fairly low resolution (1024x1024) and the body part has a very small region of the texture compared to the size of its 3D object. For this reason, few pixels are assigned to the armor body, causing aliasing problems. This can be solved by manually setting the texture coordinates so that bigger parts of the object are assigned bigger regions of the texture.
+* **Visual aliasing in the armor body**: You might have already noticed that holes in the armor body have some pixelated borders, while holes in the helmet or arms are perfectly round. This is due to the way that Blender generated the automatic UV unwrapping. The armor texture is fairly low resolution (1024x1024) and the body part has a very small region of the texture compared to the size of its 3D object. For this reason, few pixels are assigned to the armor body, causing aliasing problems. This can be solved by manually setting the texture coordinates so that bigger parts of the object are assigned bigger regions of the texture. In the following image we can see which parts of the UV map are assigned to the body armor mesh:
 
 <p align="center">
    <img src="https://github.com/LDiazN/ArmorBlasting/assets/41093870/02958438-e258-4c3e-9a3e-c5d359cd02fa" alt="Example of regions assigned to armor body in the entire texture" width="50%"/>

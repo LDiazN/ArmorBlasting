@@ -98,6 +98,7 @@ This is how the UVs look like in Blender for the robot armor. Every part shares 
 And this is the resulting mesh unwrapping material I came up with:
 ![Mesh unwrapping material node editor in Unreal 4](https://github.com/LDiazN/ArmorBlasting/assets/41093870/36295782-784f-4736-83ce-09096a99d5d6)
 
+The first part selects the pixel color based on the distance of the pixel to the sphere. The second part displaces the fragment position so that it is laid out in a plane with the same shape as the UV map.
 
 ## Fading mesh update
 The `TimeDamageRenderTarget` is a temporal damage map, so its content must be updated continuously over time. This update must be implemented as a function that is called repeatedly. For this reason, I start a timer on `BeginPlay` in the `BlastableComponent` that will update the render target every 10 milliseconds, at a rate of ~10 frames per second. It is important to not raise the update ratio too high, as this can cause the GPU to be overloaded with graphics calls.

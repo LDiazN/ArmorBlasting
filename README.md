@@ -122,6 +122,9 @@ To summarize, the most important configuration settings for this material are:
 * **Two-sided**: The material must be two-sided in order to render the inside of the mesh.
 * **Different channels**: Different channels can be used to store different sizes of holes, which allows you to create a glowing ring around the hole.
 
+This is the resulting armor material graph:
+![Armor material showing the color selecting, computing of melted metal color, and selection of opacity value](https://github.com/LDiazN/ArmorBlasting/assets/41093870/22782cd7-7fc6-473c-8a34-d5b641957052)
+
 
 # Known issues
 

@@ -130,7 +130,7 @@ This is the resulting armor material graph:
 
 The current implementation has some problems that can be improved in further iterations. These problems are as follows:
 
-* **Visual aliasing in the armor body**: You might have already noticed that holes in the armor body have some pixelated borders, while holes in the helmet or arms are perfectly round. This is due to the way that Blender generated the automatic UV unwrapping. The armor texture is fairly low resolution (1024x1024) and the body part has a very small region of the texture compared to the size of its 3D object. For this reason, few pixels are assigned to the armor body, causing aliasing problems. This can be solved by manually setting the texture coordinates so that bigger parts of the object are assigned bigger regions of the texture.
+* **Visual aliasing in the armor body**: You might have already noticed that holes in the armor body have some pixelated borders, while holes in the helmet or arms are perfectly round. This is due to the way that Blender generated the automatic UV unwrapping. The armor texture is fairly low resolution (1024x1024) and the body part has a very small region of the texture compared to the size of its 3D object. For this reason, few pixels are assigned to the armor body, causing aliasing problems. This can be solved by manually setting the texture coordinates so that bigger parts of the object are assigned bigger regions of the texture. In the following image we can see which parts of the UV map are assigned to the body armor mesh:
 
 <p align="center">
    <img src="https://github.com/LDiazN/ArmorBlasting/assets/41093870/02958438-e258-4c3e-9a3e-c5d359cd02fa" alt="Example of regions assigned to armor body in the entire texture" width="50%"/>
